@@ -34,7 +34,19 @@ public final class LocalServer implements AutoCloseable{
     boolean mutation=List.of("POST","PUT","PATCH","DELETE").contains(method);
     if(mutation&&!"application/json".equalsIgnoreCase(Optional.ofNullable(ex.getRequestHeaders().getFirst("Content-Type")).orElse("").split(";",2)[0].trim())){send(ex,415,Json.stringify(Map.of("error","Content-Type must be application/json")));return;}
     String origin=ex.getRequestHeaders().getFirst("Origin");
-    if(mutation&&origin!=null&&!origin.equals("http://127.0.0.1:"+port())&&!origin.equals("http://localhost:"+port())){send(ex,403,Json.stringify(Map.of("error","Cross-origin mutations are disabled")));return;}
+    boolean statelessPreview=path.equals("/api/demo/preflight")&&"POST".equals(method);
+    if(mutation&&origin!=null){
+      boolean validOrigin=origin.equals("http://127.0.0.1:"+port())||origin.equals("http://localhost:"+port());
+      if(statelessPreview){
+        try{
+          URI source=URI.create(origin);
+          String host=ex.getRequestHeaders().getFirst("Host");
+          validOrigin=host!=null&&source.getRawAuthority()!=null&&host.equalsIgnoreCase(source.getRawAuthority())
+              &&List.of("http","https").contains(source.getScheme());
+        }catch(IllegalArgumentException invalid){validOrigin=false;}
+      }
+      if(!validOrigin){send(ex,403,Json.stringify(Map.of("error","Cross-origin requests are disabled")));return;}
+    }
     if(ex.getRequestHeaders().getFirst("Content-Length")!=null){try{if(Long.parseLong(ex.getRequestHeaders().getFirst("Content-Length"))>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}}catch(NumberFormatException e){send(ex,400,"{\"error\":\"Invalid Content-Length\"}");return;}}
     byte[] request=ex.getRequestBody().readNBytes(1024*1024+1);
     if(request.length>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}
@@ -44,6 +56,14 @@ public final class LocalServer implements AutoCloseable{
       if(!"GET".equals(method)){send(ex,405,Json.stringify(Map.of("error","Read-only endpoint")));return;}
       try{
         Map<String,Object> info=ZernioClient.inspectAccounts(ex.getRequestHeaders().getFirst("Authorization"));
+        send(ex,200,Json.stringify(info));
+      }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
+      return;
+    }
+    if(path.equals("/api/zernio/live")){
+      if(!"GET".equals(method)){send(ex,405,Json.stringify(Map.of("error","Read-only endpoint")));return;}
+      try{
+        Map<String,Object> info=ZernioClient.inspectLive(ex.getRequestHeaders().getFirst("Authorization"));
         send(ex,200,Json.stringify(info));
       }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
       return;
