@@ -125,3 +125,15 @@ Free Render hosting uses ephemeral storage and can sleep
 after inactivity. Changes to local container files are not durable.
 
 Run locally using run.bat or run.sh for the editable developer mode.
+
+
+## Zernio visitor sandbox (read-only)
+
+The **Integrations** page offers two independent tests:
+
+1. **Public profile URL preview:** Checks the format of a submitted HTTPS LinkedIn, Instagram, X, Facebook, YouTube, TikTok, Threads or Pinterest profile URL. It does not retrieve private data, verify ownership, call Zernio, or save the URL.
+2. **Real Zernio account inspection:** Visitors can supply their **own restricted, read-only, profile-scoped Zernio API key**. The browser sends it once in an Authorization header over HTTPS to `GET /api/zernio/accounts`. Java forwards it to the fixed, upstream **GET** at `https://zernio.com/api/v1/accounts`. The app limits the returned data to display-only account metadata. It does not save the key or results, and does not implement publishing, scheduling, social OAuth, or account changes. A global 20/minute request budget helps protect the free demonstration.
+
+**Privacy and security:** PostFlight does not persist submitted keys, profile URLs or results in files, its application database, browser local storage or cookies. The key is nonetheless transmitted transiently to the PostFlight server, its hosting/network provider and Zernio. This is **not zero-disclosure**. Use a short-lived key with `permission=read` and `scope=profiles` and revoke it after testing. Never enter social-media passwords, an unrestricted API key or another person's key. Zernio manages OAuth tokens for accounts connected separately through its dashboard.
+
+A public profile URL alone never grants control of an account. **Do not connect personal LinkedIn publishing permissions to an unauthenticated public application.** Real multi-user publishing requires authenticated PostFlight users, tenant-to-profile authorization, secure credentials and storage, audit logging, approval controls, and safe retries. The public demo intentionally has none of those write operations.
