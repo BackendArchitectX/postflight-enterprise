@@ -55,6 +55,7 @@ public final class LocalServer implements AutoCloseable{
    if(!file.startsWith(web)||!Files.isRegularFile(file)){send(ex,404,"Not found");return;}
    h.set("Content-Type",path.endsWith(".js")?"text/javascript; charset=utf-8":path.endsWith(".css")?"text/css; charset=utf-8":path.endsWith(".png")?"image/png":path.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8");
    h.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'");
+   if(path.equals("/")||path.endsWith(".html")||path.endsWith(".js")||path.endsWith(".css")) h.set("Cache-Control","no-cache, must-revalidate");
    byte[] bytes=Files.readAllBytes(file);ex.sendResponseHeaders(200,method.equals("HEAD")?-1:bytes.length);if(!method.equals("HEAD")){try(OutputStream out=ex.getResponseBody()){out.write(bytes);}}
   }catch(Exception e){try{send(ex,500,"Internal error");}catch(Exception ignored){}}finally{ex.close();}
  }
