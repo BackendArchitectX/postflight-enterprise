@@ -17,7 +17,9 @@ public final class LocalServer implements AutoCloseable{
  public LocalServer(int port,Path root)throws Exception{
   Path data=root.resolve("data"),seed=root.resolve("docs/seed.json");web=root.resolve("web").toAbsolutePath().normalize();
   PostFlightService service=new PostFlightService(data,seed);api=new ApiDispatcher(service);
-  server=HttpServer.create(new InetSocketAddress("127.0.0.1",port),0);
+  String bindHost = "true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"))
+      ? "0.0.0.0" : "127.0.0.1";
+  server=HttpServer.create(new InetSocketAddress(bindHost,port),0);
   server.createContext("/",this::handle);server.setExecutor(Executors.newFixedThreadPool(8));
  }
  public void start(){server.start();}

@@ -63,7 +63,7 @@ public final class PostFlightService {
     private String activePolicy(){return PreflightRules.POLICY_VERSION+"+r"+longValue(state.get("policyRevision"),0);}
     private String digest(Map<String,Object> d){return sha256(get(d,"id")+"|"+get(d,"version")+"|"+get(d,"title")+"|"+get(d,"body")+"|"+get(d,"altText")+"|"+get(d,"platforms"));}
     private String nextId(String prefix){long n=sequence.incrementAndGet();state.put("sequence",sequence.get());return prefix+n;}
-    public synchronized Map<String,Object> bootstrap(){Map<String,Object> output=new LinkedHashMap<>(state);output.remove("certificateSecret");output.put("runtime",doc("mode","local-development","persistent",true,"authentication",false,"publishing",false,"warning",DEV_WARNING));return Json.object(Json.parse(Json.stringify(output)));}
+    public synchronized Map<String,Object> bootstrap(){Map<String,Object> output=new LinkedHashMap<>(state);output.remove("certificateSecret");output.put("runtime",doc("mode","true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO")) ? "public-read-only" : "local-development","persistent",true,"authentication",false,"publishing",false,"warning",DEV_WARNING));return Json.object(Json.parse(Json.stringify(output)));}
     public synchronized Map<String,Object> session(){return doc("principal","local-developer","authenticated",false,"role","DEMO_OPERATOR","message",DEV_WARNING);}
     public synchronized Map<String,Object> health(){return doc("status","UP","service","postflight-core","java","17+","storage","file-backed","policy",PreflightRules.POLICY_VERSION,"publishing","DISABLED");}
     public synchronized List<Map<String,Object>> drafts(){return copy(list("drafts"));}

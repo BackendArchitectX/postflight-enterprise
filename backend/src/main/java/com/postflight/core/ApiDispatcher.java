@@ -8,6 +8,11 @@ public final class ApiDispatcher {
     private final PostFlightService service;
     public ApiDispatcher(PostFlightService service){this.service=service;}
     public Answer handle(String method,String rawPath,String body){
+      // Public demo mode: block every state-changing API request.
+      if ("true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"))
+          && !"GET".equals(method) && !"HEAD".equals(method)) {
+        return out(403, Map.of("error", "Public demo is read-only"));
+      }
       String path=rawPath.split("\\?",2)[0];
       try{
         Map<String,Object> payload=(body==null||body.isBlank())?new LinkedHashMap<>():Json.object(Json.parse(body));

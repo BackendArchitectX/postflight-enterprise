@@ -111,3 +111,17 @@ See [Architecture](docs/ARCHITECTURE.md), [API Reference](docs/API.md), and [Sec
 Design source: [PostFlight Enterprise in Figma](https://www.figma.com/design/vj7eawzLm6VzDWtF2niFdC)
 
 This is a user-owned local project delivered for continued development. No Lovable credits are required.
+
+## Public cloud demo
+
+The Docker image starts with POSTFLIGHT_PUBLIC_DEMO=true.
+The public demonstration uses synthetic seed data and rejects
+all state-changing API requests.
+
+Zernio publishing, authentication and multi-tenant operations
+are not implemented. This is not a production deployment.
+
+Free Render hosting uses ephemeral storage and can sleep
+after inactivity. Changes to local container files are not durable.
+
+Run locally using run.bat or run.sh for the editable developer mode.
