@@ -1,0 +1,1038 @@
+[
+  {
+    "id": "PF-QA-001",
+    "group": "01 · Getting ready",
+    "title": "Open PostFlight",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-002",
+    "group": "01 · Getting ready",
+    "title": "Health check",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-003",
+    "group": "01 · Getting ready",
+    "title": "Session check",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-004",
+    "group": "01 · Getting ready",
+    "title": "Data backup",
+    "coverage": "MANUAL OR ENVIRONMENT",
+    "note": "Cannot be fully validated by API checks alone"
+  },
+  {
+    "id": "PF-QA-005",
+    "group": "02 · Buttons everywhere",
+    "title": "All 12 left-menu items",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-006",
+    "group": "02 · Buttons everywhere",
+    "title": "Top search opens",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-007",
+    "group": "02 · Buttons everywhere",
+    "title": "Top search filters pages",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-008",
+    "group": "02 · Buttons everywhere",
+    "title": "Keyboard search",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-009",
+    "group": "02 · Buttons everywhere",
+    "title": "Escape closes popup",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-010",
+    "group": "02 · Buttons everywhere",
+    "title": "Notifications bell",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-011",
+    "group": "02 · Buttons everywhere",
+    "title": "Back and Forward buttons",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-012",
+    "group": "02 · Buttons everywhere",
+    "title": "Refresh page",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-013",
+    "group": "02 · Buttons everywhere",
+    "title": "Mobile sidebar",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-014",
+    "group": "02 · Buttons everywhere",
+    "title": "Page headings and labels",
+    "coverage": "MANUAL OR ENVIRONMENT",
+    "note": "Cannot be fully validated by API checks alone"
+  },
+  {
+    "id": "PF-QA-015",
+    "group": "03 · Mission Control",
+    "title": "7D chart",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-016",
+    "group": "03 · Mission Control",
+    "title": "14D chart",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-017",
+    "group": "03 · Mission Control",
+    "title": "30D chart",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-018",
+    "group": "03 · Mission Control",
+    "title": "Export report",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-019",
+    "group": "03 · Mission Control",
+    "title": "New validation",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-020",
+    "group": "03 · Mission Control",
+    "title": "Recent release row",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-021",
+    "group": "03 · Mission Control",
+    "title": "Open validation queue",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-022",
+    "group": "04 · Workspaces",
+    "title": "Filter workspace cards",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-023",
+    "group": "04 · Workspaces",
+    "title": "Open workspace",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-024",
+    "group": "04 · Workspaces",
+    "title": "Inspect project row",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-025",
+    "group": "04 · Workspaces",
+    "title": "Invite member",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-026",
+    "group": "04 · Workspaces",
+    "title": "New workspace",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-027",
+    "group": "04 · Workspaces",
+    "title": "Workspace breadcrumb consistency",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-028",
+    "group": "02 · Buttons everywhere",
+    "title": "Modal Cancel button",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-029",
+    "group": "02 · Buttons everywhere",
+    "title": "Modal close X",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-030",
+    "group": "02 · Buttons everywhere",
+    "title": "Click outside dialog",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-031",
+    "group": "02 · Buttons everywhere",
+    "title": "Search is page-only",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-032",
+    "group": "05 · Content Studio",
+    "title": "Open new draft dialog",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-033",
+    "group": "05 · Content Studio",
+    "title": "Blank title rejected",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-034",
+    "group": "05 · Content Studio",
+    "title": "Create draft",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-035",
+    "group": "05 · Content Studio",
+    "title": "Campaign dropdown truth test",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-036",
+    "group": "05 · Content Studio",
+    "title": "Switch Saved drafts",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-037",
+    "group": "05 · Content Studio",
+    "title": "Edit Post title",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-038",
+    "group": "05 · Content Studio",
+    "title": "Edit caption",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-039",
+    "group": "05 · Content Studio",
+    "title": "Live caption preview",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-040",
+    "group": "05 · Content Studio",
+    "title": "Empty alt text",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-041",
+    "group": "05 · Content Studio",
+    "title": "Save draft button",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-042",
+    "group": "05 · Content Studio",
+    "title": "Auto-save",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-043",
+    "group": "05 · Content Studio",
+    "title": "LinkedIn tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-044",
+    "group": "05 · Content Studio",
+    "title": "X tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-045",
+    "group": "05 · Content Studio",
+    "title": "Instagram tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-046",
+    "group": "05 · Content Studio",
+    "title": "Facebook tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-047",
+    "group": "05 · Content Studio",
+    "title": "Top preflight button",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-048",
+    "group": "05 · Content Studio",
+    "title": "Bottom preflight button",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-049",
+    "group": "05 · Content Studio",
+    "title": "Run preflight with guarantee",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-050",
+    "group": "05 · Content Studio",
+    "title": "Click individual finding",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-051",
+    "group": "05 · Content Studio",
+    "title": "View all",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-052",
+    "group": "06 · Validation Center",
+    "title": "Blocked verdict",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-053",
+    "group": "06 · Validation Center",
+    "title": "All severity tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-054",
+    "group": "06 · Validation Center",
+    "title": "Critical filter",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-055",
+    "group": "06 · Validation Center",
+    "title": "High filter",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-056",
+    "group": "06 · Validation Center",
+    "title": "Medium filter",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-057",
+    "group": "06 · Validation Center",
+    "title": "Select finding",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-058",
+    "group": "06 · Validation Center",
+    "title": "Return to editor",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-059",
+    "group": "06 · Validation Center",
+    "title": "Rerun checks",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-060",
+    "group": "06 · Validation Center",
+    "title": "Export findings",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-061",
+    "group": "06 · Validation Center",
+    "title": "Fixed content passes",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-062",
+    "group": "06 · Validation Center",
+    "title": "Warning-only review",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-063",
+    "group": "06 · Validation Center",
+    "title": "Empty-body check",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-064",
+    "group": "06 · Validation Center",
+    "title": "X character budget",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-065",
+    "group": "06 · Validation Center",
+    "title": "Instagram link warning",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-066",
+    "group": "07 · Policy Studio",
+    "title": "Rule library tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-067",
+    "group": "07 · Policy Studio",
+    "title": "Policy simulator tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-068",
+    "group": "07 · Policy Studio",
+    "title": "Advisory simulation",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-069",
+    "group": "07 · Policy Studio",
+    "title": "Balanced simulation",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-070",
+    "group": "07 · Policy Studio",
+    "title": "Strict simulation",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-071",
+    "group": "07 · Policy Studio",
+    "title": "Version history tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-072",
+    "group": "07 · Policy Studio",
+    "title": "Add rule opens",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-073",
+    "group": "07 · Policy Studio",
+    "title": "Severity selector options",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-074",
+    "group": "07 · Policy Studio",
+    "title": "Blank rule rejected",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-075",
+    "group": "07 · Policy Studio",
+    "title": "Create custom rule",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-076",
+    "group": "07 · Policy Studio",
+    "title": "Duplicate phrase rejected",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-077",
+    "group": "07 · Policy Studio",
+    "title": "Custom rule enforcement",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-078",
+    "group": "07 · Policy Studio",
+    "title": "Publish version button",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-079",
+    "group": "07 · Policy Studio",
+    "title": "Old approval after new policy",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-080",
+    "group": "08 · Media Intelligence",
+    "title": "All filter",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-081",
+    "group": "08 · Media Intelligence",
+    "title": "Review filter",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-082",
+    "group": "08 · Media Intelligence",
+    "title": "Ready filter",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-083",
+    "group": "08 · Media Intelligence",
+    "title": "Upload asset opens",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-084",
+    "group": "08 · Media Intelligence",
+    "title": "No-file rejected",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-085",
+    "group": "08 · Media Intelligence",
+    "title": "Valid PNG upload",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-086",
+    "group": "08 · Media Intelligence",
+    "title": "Missing-alt upload",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-087",
+    "group": "08 · Media Intelligence",
+    "title": "Unsupported file rejected",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-088",
+    "group": "08 · Media Intelligence",
+    "title": "Oversized file rejected",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-089",
+    "group": "08 · Media Intelligence",
+    "title": "Asset card click",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-090",
+    "group": "09 · Workflow Builder",
+    "title": "Workflow designer tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-091",
+    "group": "09 · Workflow Builder",
+    "title": "Select Content validation node",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-092",
+    "group": "09 · Workflow Builder",
+    "title": "Select Risk classification node",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-093",
+    "group": "09 · Workflow Builder",
+    "title": "Select Legal review node",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-094",
+    "group": "09 · Workflow Builder",
+    "title": "Select Brand review node",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-095",
+    "group": "09 · Workflow Builder",
+    "title": "Select Release approval node",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-096",
+    "group": "09 · Workflow Builder",
+    "title": "Test workflow",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-097",
+    "group": "09 · Workflow Builder",
+    "title": "Execution history tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-098",
+    "group": "09 · Workflow Builder",
+    "title": "View execution history button",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-099",
+    "group": "09 · Workflow Builder",
+    "title": "Templates tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-100",
+    "group": "09 · Workflow Builder",
+    "title": "Preview template",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-101",
+    "group": "09 · Workflow Builder",
+    "title": "Edit workflow step",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-102",
+    "group": "10 · Review Center",
+    "title": "Needs review tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-103",
+    "group": "10 · Review Center",
+    "title": "Changes tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-104",
+    "group": "10 · Review Center",
+    "title": "Completed tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-105",
+    "group": "10 · Review Center",
+    "title": "All tab",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-106",
+    "group": "10 · Review Center",
+    "title": "Select an inbox row",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-107",
+    "group": "10 · Review Center",
+    "title": "Request approval",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-108",
+    "group": "10 · Review Center",
+    "title": "Approve blocked content",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-109",
+    "group": "10 · Review Center",
+    "title": "Request changes",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-110",
+    "group": "10 · Review Center",
+    "title": "Approve safe draft",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-111",
+    "group": "11 · Release Center",
+    "title": "Issue before validation",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-112",
+    "group": "11 · Release Center",
+    "title": "Issue before approval",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-113",
+    "group": "11 · Release Center",
+    "title": "Issue after approval",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-114",
+    "group": "11 · Release Center",
+    "title": "Selected release versus new issue",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-115",
+    "group": "11 · Release Center",
+    "title": "Select local release",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-116",
+    "group": "11 · Release Center",
+    "title": "Select sample release",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-117",
+    "group": "11 · Release Center",
+    "title": "Copy certificate details",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-118",
+    "group": "11 · Release Center",
+    "title": "Export register",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-119",
+    "group": "11 · Release Center",
+    "title": "Verify via API",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-120",
+    "group": "11 · Release Center",
+    "title": "Edit invalidates approval",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-121",
+    "group": "12 · Compliance",
+    "title": "Select incident row",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-122",
+    "group": "12 · Compliance",
+    "title": "Mark resolved",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-123",
+    "group": "12 · Compliance",
+    "title": "Escalate",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-124",
+    "group": "12 · Compliance",
+    "title": "Create incident",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-125",
+    "group": "12 · Compliance",
+    "title": "Export incident log",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-126",
+    "group": "13 · Integrations",
+    "title": "Zernio Details",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-127",
+    "group": "13 · Integrations",
+    "title": "Local Java API Details",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-128",
+    "group": "13 · Integrations",
+    "title": "Webhooks Details",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-129",
+    "group": "13 · Integrations",
+    "title": "Object storage Details",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-130",
+    "group": "13 · Integrations",
+    "title": "API documentation",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-131",
+    "group": "13 · Integrations",
+    "title": "Add integration",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-132",
+    "group": "13 · Integrations",
+    "title": "Publishing disabled",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-133",
+    "group": "14 · Administration",
+    "title": "Invite member",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-134",
+    "group": "14 · Administration",
+    "title": "Toggle Mandatory legal sign-off",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-135",
+    "group": "14 · Administration",
+    "title": "Toggle Audit trail enabled",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-136",
+    "group": "14 · Administration",
+    "title": "Toggle Reviewer notifications",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-137",
+    "group": "14 · Administration",
+    "title": "Reload after toggle",
+    "coverage": "DEMO-ONLY / NOT IMPLEMENTED",
+    "note": "No production action is implemented; verify truthful UI explanation rather than real operation"
+  },
+  {
+    "id": "PF-QA-138",
+    "group": "14 · Administration",
+    "title": "Reset cancel path",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-139",
+    "group": "14 · Administration",
+    "title": "Reset confirm path — LAST",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-140",
+    "group": "15 · Reliability and errors",
+    "title": "Backend persistence",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-141",
+    "group": "15 · Reliability and errors",
+    "title": "Verify audit chain",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-142",
+    "group": "15 · Reliability and errors",
+    "title": "Unknown API",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-143",
+    "group": "15 · Reliability and errors",
+    "title": "Conflict-safe editing (API)",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-144",
+    "group": "15 · Reliability and errors",
+    "title": "Keep local only",
+    "coverage": "BACKEND LOGIC CHECKED",
+    "note": "Underlying API path checked on isolated data; UI click itself may remain unverified"
+  },
+  {
+    "id": "PF-QA-145",
+    "group": "15 · Reliability and errors",
+    "title": "Look for unintended changes",
+    "coverage": "BROWSER INTERACTION NOT RUN",
+    "note": "Requires a real browser interaction on the current UI"
+  },
+  {
+    "id": "PF-QA-146",
+    "group": "15 · Reliability and errors",
+    "title": "Accessibility keyboard navigation",
+    "coverage": "MANUAL OR ENVIRONMENT",
+    "note": "Cannot be fully validated by API checks alone"
+  },
+  {
+    "id": "PF-QA-147",
+    "group": "15 · Reliability and errors",
+    "title": "Small-screen layout",
+    "coverage": "MANUAL OR ENVIRONMENT",
+    "note": "Cannot be fully validated by API checks alone"
+  },
+  {
+    "id": "PF-QA-148",
+    "group": "15 · Reliability and errors",
+    "title": "Console errors",
+    "coverage": "MANUAL OR ENVIRONMENT",
+    "note": "Cannot be fully validated by API checks alone"
+  }
+]

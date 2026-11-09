@@ -1,0 +1,178 @@
+{
+  "drafts": [
+    {
+      "id": "PF-2048",
+      "title": "A smarter way to manage your financial future",
+      "body": "A smarter way to manage your financial future starts today. Our solutions help you build better financial habits and make informed choices. Get guaranteed returns with Northstar. #FinancialWellness #Northstar",
+      "campaign": "Q4 Investor Awareness",
+      "status": "Needs changes",
+      "platforms": "LinkedIn, Instagram, X",
+      "updated": "Just now",
+      "author": "Aisha Patel"
+    },
+    {
+      "id": "PF-2045",
+      "title": "Financial wellness: a practical guide",
+      "body": "Small steps, stronger habits. Discover financial education built around real-world goals. Investing involves risk and past performance is not a guarantee of future results.",
+      "campaign": "Q4 Investor Awareness",
+      "status": "Ready",
+      "platforms": "LinkedIn, Facebook",
+      "updated": "26 min ago",
+      "author": "Lucas Reed"
+    },
+    {
+      "id": "PF-2043",
+      "title": "Five ways to strengthen your savings",
+      "body": "Five habits to help you keep a stronger savings buffer for what matters.",
+      "campaign": "Financial Wellness",
+      "status": "In review",
+      "platforms": "Instagram",
+      "updated": "2 hours ago",
+      "author": "Maya Chen"
+    },
+    {
+      "id": "PF-2039",
+      "title": "New account experience",
+      "body": "Introducing a refreshed account experience to help you manage everyday finances. Explore the new features.",
+      "campaign": "Product Launch",
+      "status": "Ready",
+      "platforms": "LinkedIn, X",
+      "updated": "Yesterday",
+      "author": "Aisha Patel"
+    },
+    {
+      "id": "PF-2037",
+      "title": "Investing made effortless",
+      "body": "A seamless approach to personal investments. All investments carry risks. Review product documentation before investing.",
+      "campaign": "Investor Education",
+      "status": "Blocked",
+      "platforms": "Instagram, X",
+      "updated": "Yesterday",
+      "author": "Daniel Kim"
+    },
+    {
+      "id": "PF-2033",
+      "title": "Introducing cash-flow insights",
+      "body": "Make better operational decisions with a clearer picture of cash movement.",
+      "campaign": "SME Awareness",
+      "status": "Approved",
+      "platforms": "LinkedIn",
+      "updated": "2 days ago",
+      "author": "Lucas Reed"
+    },
+    {
+      "id": "PF-2031",
+      "title": "Security first, always",
+      "body": "Your privacy and security are central to our approach. Learn about account protections.",
+      "campaign": "Trust & Safety",
+      "status": "Approved",
+      "platforms": "Facebook",
+      "updated": "3 days ago",
+      "author": "Maya Chen"
+    }
+  ],
+  "selectedDraft": "PF-2048",
+  "findings": [
+    {
+      "id": "FIN-MKT-001",
+      "title": "Unverified guarantee of returns",
+      "severity": "Critical",
+      "channel": "LinkedIn",
+      "detail": "The copy includes an absolute claim about financial outcomes. Northstar policy requires a documented, approved substantiation before such claims can be used.",
+      "match": "guaranteed returns",
+      "fix": "Remove the guarantee or submit evidence for mandatory legal review."
+    },
+    {
+      "id": "FIN-MKT-014",
+      "title": "Mandatory risk disclosure absent",
+      "severity": "High",
+      "channel": "All channels",
+      "detail": "Investment-related claims require an approved risk disclaimer in the same content version.",
+      "match": "No approved disclaimer detected",
+      "fix": "Add the approved risk disclaimer and rerun validation."
+    },
+    {
+      "id": "PLT-X-011",
+      "title": "Weighted character limit exceeded",
+      "severity": "High",
+      "channel": "X",
+      "detail": "This cross-platform variant may exceed X-specific publishing constraints.",
+      "match": "Caption length",
+      "fix": "Create a shorter X-specific version."
+    },
+    {
+      "id": "MEDIA-021",
+      "title": "Potential safe-area crop",
+      "severity": "Medium",
+      "channel": "Instagram",
+      "detail": "The primary visual may crop inside selected feed layouts.",
+      "match": "Campaign hero image",
+      "fix": "Verify the platform crop before approval."
+    },
+    {
+      "id": "A11Y-004",
+      "title": "Missing alternative text",
+      "severity": "Medium",
+      "channel": "LinkedIn",
+      "detail": "The campaign attachment requires descriptive alternative text.",
+      "match": "northstar-campaign-hero.png",
+      "fix": "Add meaningful alt text describing the core visual."
+    },
+    {
+      "id": "LINK-006",
+      "title": "Unsupported external link formatting",
+      "severity": "Low",
+      "channel": "Instagram",
+      "detail": "The draft references link formatting that may not be clickable in an Instagram caption.",
+      "match": "External link CTA",
+      "fix": "Use an approved profile link or platform-supported destination."
+    }
+  ],
+  "selectedFinding": "FIN-MKT-001",
+  "platform": "LinkedIn",
+  "altText": "",
+  "reviewStatus": {
+    "PF-2048": "Changes requested",
+    "PF-2043": "Awaiting brand",
+    "PF-2039": "Approved"
+  },
+  "theme": "light",
+  "timeframe": "14D",
+  "view": "grid",
+  "policyTab": "library",
+  "workflowTab": "canvas",
+  "reviewTab": "pending",
+  "mediaTab": "all",
+  "validationTab": "all",
+  "workspace": "Northstar Financial",
+  "query": "",
+  "simulation": 2,
+  "toggles": {
+    "notify": true,
+    "requireLegal": true,
+    "audit": true
+  },
+  "alerts": [
+    {
+      "id": "CMP-018",
+      "title": "Financial return claim",
+      "severity": "Critical",
+      "owner": "Maya Chen",
+      "status": "Open"
+    },
+    {
+      "id": "CMP-014",
+      "title": "Missing campaign disclaimer",
+      "severity": "High",
+      "owner": "Aisha Patel",
+      "status": "Investigating"
+    },
+    {
+      "id": "CMP-010",
+      "title": "Unauthorized asset variant",
+      "severity": "Medium",
+      "owner": "Lucas Reed",
+      "status": "Resolved"
+    }
+  ]
+}

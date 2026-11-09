@@ -1,0 +1,49 @@
+
+# IntelliJ IDEA
+.idea/
+*.iml
+.vscode/
+
+# Build outputs
+build/
+dist/
+backend/target/
+*.class
+
+# Local application state
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# QA results (retain QA test source code)
+qa-reports/
+
+# Credentials and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+
+# Logs, backups and temporary files
+*.log
+*.tmp
+*.bak
+*.backup
+*.backup.*
+*.pid
+
+# Dependencies
+node_modules/
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini

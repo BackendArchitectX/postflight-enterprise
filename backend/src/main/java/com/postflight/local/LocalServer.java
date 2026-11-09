@@ -1,0 +1,50 @@
+package com.postflight.local;
+
+import com.postflight.core.*;
+import com.sun.net.httpserver.*;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.*;
+
+/** Localhost-only runtime with the same application API as the Spring Boot controller. */
+public final class LocalServer implements AutoCloseable{
+ private final HttpServer server;
+ private final ApiDispatcher api;
+ private final Path web;
+ public LocalServer(int port,Path root)throws Exception{
+  Path data=root.resolve("data"),seed=root.resolve("docs/seed.json");web=root.resolve("web").toAbsolutePath().normalize();
+  PostFlightService service=new PostFlightService(data,seed);api=new ApiDispatcher(service);
+  server=HttpServer.create(new InetSocketAddress("127.0.0.1",port),0);
+  server.createContext("/",this::handle);server.setExecutor(Executors.newFixedThreadPool(8));
+ }
+ public void start(){server.start();}
+ public int port(){return server.getAddress().getPort();}
+ @Override public void close(){server.stop(0);}
+ private void handle(HttpExchange ex)throws IOException{
+  try{
+   Headers h=ex.getResponseHeaders();h.set("X-Content-Type-Options","nosniff");h.set("Referrer-Policy","no-referrer");h.set("X-Frame-Options","DENY");
+   String path=ex.getRequestURI().getPath(),method=ex.getRequestMethod().toUpperCase(Locale.ROOT);
+   if(path.startsWith("/api/")){
+    h.set("Content-Type","application/json; charset=utf-8");h.set("Cache-Control","no-store");
+    boolean mutation=List.of("POST","PUT","PATCH","DELETE").contains(method);
+    if(mutation&&!"application/json".equalsIgnoreCase(Optional.ofNullable(ex.getRequestHeaders().getFirst("Content-Type")).orElse("").split(";",2)[0].trim())){send(ex,415,Json.stringify(Map.of("error","Content-Type must be application/json")));return;}
+    String origin=ex.getRequestHeaders().getFirst("Origin");
+    if(mutation&&origin!=null&&!origin.equals("http://127.0.0.1:"+port())&&!origin.equals("http://localhost:"+port())){send(ex,403,Json.stringify(Map.of("error","Cross-origin mutations are disabled")));return;}
+    if(ex.getRequestHeaders().getFirst("Content-Length")!=null){try{if(Long.parseLong(ex.getRequestHeaders().getFirst("Content-Length"))>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}}catch(NumberFormatException e){send(ex,400,"{\"error\":\"Invalid Content-Length\"}");return;}}
+    byte[] request=ex.getRequestBody().readNBytes(1024*1024+1);
+    if(request.length>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}
+    ApiDispatcher.Answer result=api.handle(method,path,new String(request,StandardCharsets.UTF_8));send(ex,result.status(),result.json());return;
+   }
+   if(!"GET".equals(method)&&!"HEAD".equals(method)){send(ex,405,"Method not allowed");return;}
+   Path file=(path.equals("/")?web.resolve("index.html"):web.resolve(path.substring(1))).normalize();
+   if(!file.startsWith(web)||!Files.isRegularFile(file)){send(ex,404,"Not found");return;}
+   h.set("Content-Type",path.endsWith(".js")?"text/javascript; charset=utf-8":path.endsWith(".css")?"text/css; charset=utf-8":path.endsWith(".png")?"image/png":path.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8");
+   h.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'");
+   byte[] bytes=Files.readAllBytes(file);ex.sendResponseHeaders(200,method.equals("HEAD")?-1:bytes.length);if(!method.equals("HEAD")){try(OutputStream out=ex.getResponseBody()){out.write(bytes);}}
+  }catch(Exception e){try{send(ex,500,"Internal error");}catch(Exception ignored){}}finally{ex.close();}
+ }
+ private void send(HttpExchange ex,int status,String data)throws IOException{byte[] bytes=data.getBytes(StandardCharsets.UTF_8);ex.sendResponseHeaders(status,bytes.length);try(OutputStream out=ex.getResponseBody()){out.write(bytes);}}
+}

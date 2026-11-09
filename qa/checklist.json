@@ -1,0 +1,1334 @@
+[
+  {
+    "id": "PF-QA-001",
+    "group": "01 · Getting ready",
+    "title": "Open PostFlight",
+    "steps": "Keep run.bat running. Open http://127.0.0.1:8080/#/overview",
+    "expect": "Mission Control loads, left menu displays all 12 sections.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-002",
+    "group": "01 · Getting ready",
+    "title": "Health check",
+    "steps": "In PowerShell: Invoke-RestMethod http://127.0.0.1:8080/api/health",
+    "expect": "status=UP, publishing=DISABLED",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-003",
+    "group": "01 · Getting ready",
+    "title": "Session check",
+    "steps": "In PowerShell: Invoke-RestMethod http://127.0.0.1:8080/api/session",
+    "expect": "authenticated=False, demo-only warning shown.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-004",
+    "group": "01 · Getting ready",
+    "title": "Data backup",
+    "steps": "Confirm data/postflight-data.backup.json exists from your earlier Copy-Item command.",
+    "expect": "Backup file exists. Back up data/media separately if you upload images.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-005",
+    "group": "02 · Buttons everywhere",
+    "title": "All 12 left-menu items",
+    "steps": "Click each left sidebar section one at a time.",
+    "expect": "Correct page heading changes; no blank pages, no server error.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-006",
+    "group": "02 · Buttons everywhere",
+    "title": "Top search opens",
+    "steps": "Click Search content, policy, releases at the top.",
+    "expect": "Search dialog opens. It searches PAGE names, not real content.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-007",
+    "group": "02 · Buttons everywhere",
+    "title": "Top search filters pages",
+    "steps": "Search for Policy, then click Policy Studio.",
+    "expect": "Policy Studio opens.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-008",
+    "group": "02 · Buttons everywhere",
+    "title": "Keyboard search",
+    "steps": "Press Ctrl + K, type Review, press Enter.",
+    "expect": "Review Center opens.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-009",
+    "group": "02 · Buttons everywhere",
+    "title": "Escape closes popup",
+    "steps": "Open search then press Escape.",
+    "expect": "Popup closes and page remains usable.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-010",
+    "group": "02 · Buttons everywhere",
+    "title": "Notifications bell",
+    "steps": "Click bell at top right.",
+    "expect": "A short \"No new notifications in this demo\" message appears.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-011",
+    "group": "02 · Buttons everywhere",
+    "title": "Back and Forward buttons",
+    "steps": "Move between two pages, use browser Back and Forward.",
+    "expect": "Previous and next pages load correctly.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-012",
+    "group": "02 · Buttons everywhere",
+    "title": "Refresh page",
+    "steps": "Navigate to Content Studio and press Ctrl + R.",
+    "expect": "Page remains functional and saved draft is loaded from backend.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-013",
+    "group": "02 · Buttons everywhere",
+    "title": "Mobile sidebar",
+    "steps": "Make browser narrower; click the three-line menu.",
+    "expect": "Sidebar opens and navigation works.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-014",
+    "group": "02 · Buttons everywhere",
+    "title": "Page headings and labels",
+    "steps": "Try clicking a plain section heading, KPI number or explanatory text.",
+    "expect": "Ordinary text is NOT interactive; cursor and page should not falsely imply an action.",
+    "kind": "UX review",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-015",
+    "group": "03 · Mission Control",
+    "title": "7D chart",
+    "steps": "Click 7D in Release assurance.",
+    "expect": "Bar count changes to seven day sample data.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-016",
+    "group": "03 · Mission Control",
+    "title": "14D chart",
+    "steps": "Click 14D.",
+    "expect": "Bar count changes; this is illustrative data.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-017",
+    "group": "03 · Mission Control",
+    "title": "30D chart",
+    "steps": "Click 30D.",
+    "expect": "Bar count changes; not connected to live metrics.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-018",
+    "group": "03 · Mission Control",
+    "title": "Export report",
+    "steps": "Click Export report.",
+    "expect": "postflight-audit-report.json downloads (audit JSON, not a chart report).",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-019",
+    "group": "03 · Mission Control",
+    "title": "New validation",
+    "steps": "Click New validation.",
+    "expect": "Validation runs for currently selected draft; opens Validation Center.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-020",
+    "group": "03 · Mission Control",
+    "title": "Recent release row",
+    "steps": "Click a Recent releases table row.",
+    "expect": "Release Center opens, but demo row may not be an issued certificate.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-021",
+    "group": "03 · Mission Control",
+    "title": "Open validation queue",
+    "steps": "Click Open validation queue.",
+    "expect": "Validation Center opens.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-022",
+    "group": "04 · Workspaces",
+    "title": "Filter workspace cards",
+    "steps": "Type Meridian into Filter workspaces.",
+    "expect": "Only Meridian Labs card remains; clear input to see three again.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-023",
+    "group": "04 · Workspaces",
+    "title": "Open workspace",
+    "steps": "Click Open workspace on Meridian Labs.",
+    "expect": "Workspace name changes in sidebar, but backend remains a single demo tenant.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-024",
+    "group": "04 · Workspaces",
+    "title": "Inspect project row",
+    "steps": "Click Q4 Investor Awareness in project table.",
+    "expect": "Content Studio opens.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-025",
+    "group": "04 · Workspaces",
+    "title": "Invite member",
+    "steps": "Click Invite member.",
+    "expect": "Design-preview popup: no invitation is sent.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-026",
+    "group": "04 · Workspaces",
+    "title": "New workspace",
+    "steps": "Click New workspace.",
+    "expect": "Design-preview popup: no real workspace is created.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-027",
+    "group": "04 · Workspaces",
+    "title": "Workspace breadcrumb consistency",
+    "steps": "After selecting Meridian, check top breadcrumb and project heading.",
+    "expect": "Look for stale Northstar wording; record a bug if the visible workspace labels disagree.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-028",
+    "group": "02 · Buttons everywhere",
+    "title": "Modal Cancel button",
+    "steps": "Open New draft, then click Cancel.",
+    "expect": "Dialog closes and no draft is created.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-029",
+    "group": "02 · Buttons everywhere",
+    "title": "Modal close X",
+    "steps": "Open New draft, then click the X at the top right.",
+    "expect": "Dialog closes and no draft is created.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-030",
+    "group": "02 · Buttons everywhere",
+    "title": "Click outside dialog",
+    "steps": "Open New draft, then click on the dimmed area outside the dialog.",
+    "expect": "Dialog closes; no accidental draft is created.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-031",
+    "group": "02 · Buttons everywhere",
+    "title": "Search is page-only",
+    "steps": "Search for the name of a draft rather than a module title.",
+    "expect": "Search currently only lists navigation modules, despite placeholder mentioning content.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-032",
+    "group": "05 · Content Studio",
+    "title": "Open new draft dialog",
+    "steps": "Click New draft.",
+    "expect": "Create a new draft dialog opens.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-033",
+    "group": "05 · Content Studio",
+    "title": "Blank title rejected",
+    "steps": "Leave title empty, click Create draft.",
+    "expect": "Error message asks for draft title; nothing created.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-034",
+    "group": "05 · Content Studio",
+    "title": "Create draft",
+    "steps": "Title: QA Test — Financial Awareness. Select default campaign, click Create draft.",
+    "expect": "New draft appears in Saved drafts; server stores it with version 1.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-035",
+    "group": "05 · Content Studio",
+    "title": "Campaign dropdown truth test",
+    "steps": "In a later test draft, choose a different campaign option before creating.",
+    "expect": "Current frontend hardcodes Q4 Investor Awareness; log if chosen campaign is ignored.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-036",
+    "group": "05 · Content Studio",
+    "title": "Switch Saved drafts",
+    "steps": "Choose another draft, then return to your QA draft.",
+    "expect": "Correct title and caption load.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-037",
+    "group": "05 · Content Studio",
+    "title": "Edit Post title",
+    "steps": "Change title, click Save draft.",
+    "expect": "Saved title persists after refresh.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-038",
+    "group": "05 · Content Studio",
+    "title": "Edit caption",
+    "steps": "Paste: Get guaranteed returns on your investment with our financial products.",
+    "expect": "Text appears; character/word counter updates.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-039",
+    "group": "05 · Content Studio",
+    "title": "Live caption preview",
+    "steps": "With LinkedIn tab selected, type into Caption/body.",
+    "expect": "Text preview changes immediately.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-040",
+    "group": "05 · Content Studio",
+    "title": "Empty alt text",
+    "steps": "Clear Image alt text.",
+    "expect": "Field stays empty, enabling missing-alt finding.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-041",
+    "group": "05 · Content Studio",
+    "title": "Save draft button",
+    "steps": "Click Save draft.",
+    "expect": "Toast says persisted to local Java backend.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-042",
+    "group": "05 · Content Studio",
+    "title": "Auto-save",
+    "steps": "Type one word, wait for autosave, refresh.",
+    "expect": "Edited text survives refresh.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-043",
+    "group": "05 · Content Studio",
+    "title": "LinkedIn tab",
+    "steps": "Click LinkedIn.",
+    "expect": "LinkedIn visual preview becomes selected.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-044",
+    "group": "05 · Content Studio",
+    "title": "X tab",
+    "steps": "Click X.",
+    "expect": "X preview is selected; next validation uses X rules.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-045",
+    "group": "05 · Content Studio",
+    "title": "Instagram tab",
+    "steps": "Click Instagram.",
+    "expect": "Instagram preview becomes selected.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-046",
+    "group": "05 · Content Studio",
+    "title": "Facebook tab",
+    "steps": "Click Facebook.",
+    "expect": "Facebook preview becomes selected.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-047",
+    "group": "05 · Content Studio",
+    "title": "Top preflight button",
+    "steps": "Click Run preflight in the page header.",
+    "expect": "Same backend validation behavior as the composer Run preflight button.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-048",
+    "group": "05 · Content Studio",
+    "title": "Bottom preflight button",
+    "steps": "Click Run preflight below the caption fields.",
+    "expect": "Same backend validation and navigation to Validation Center.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-049",
+    "group": "05 · Content Studio",
+    "title": "Run preflight with guarantee",
+    "steps": "Select LinkedIn and click Run preflight.",
+    "expect": "BLOCKED verdict with FIN-MKT-001 and FIN-MKT-014, plus alt-text finding.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-050",
+    "group": "05 · Content Studio",
+    "title": "Click individual finding",
+    "steps": "Click a finding row in the Preflight insights panel.",
+    "expect": "Validation Center opens with finding inspector.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-051",
+    "group": "05 · Content Studio",
+    "title": "View all",
+    "steps": "Click View all next to issues.",
+    "expect": "Validation Center opens.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-052",
+    "group": "06 · Validation Center",
+    "title": "Blocked verdict",
+    "steps": "Open Validation Center after risky draft validation.",
+    "expect": "BLOCKED shown with Critical and High findings.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-053",
+    "group": "06 · Validation Center",
+    "title": "All severity tab",
+    "steps": "Click All.",
+    "expect": "All findings display.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-054",
+    "group": "06 · Validation Center",
+    "title": "Critical filter",
+    "steps": "Click Critical.",
+    "expect": "Only Critical findings display.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-055",
+    "group": "06 · Validation Center",
+    "title": "High filter",
+    "steps": "Click High.",
+    "expect": "Only High findings display.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-056",
+    "group": "06 · Validation Center",
+    "title": "Medium filter",
+    "steps": "Click Medium.",
+    "expect": "Only Medium findings display (Low not separately filterable).",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-057",
+    "group": "06 · Validation Center",
+    "title": "Select finding",
+    "steps": "Click FIN-MKT-001 finding row.",
+    "expect": "Right-hand inspector shows title, cause, match and fix.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-058",
+    "group": "06 · Validation Center",
+    "title": "Return to editor",
+    "steps": "Click Return to editor.",
+    "expect": "Content Studio opens with selected draft.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-059",
+    "group": "06 · Validation Center",
+    "title": "Rerun checks",
+    "steps": "Click Rerun checks.",
+    "expect": "New server run is stored and verdict recalculated.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-060",
+    "group": "06 · Validation Center",
+    "title": "Export findings",
+    "steps": "Click Export findings.",
+    "expect": "Current implementation exports audit JSON, not a dedicated findings report.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-061",
+    "group": "06 · Validation Center",
+    "title": "Fixed content passes",
+    "steps": "Replace body with: Build stronger financial habits with practical guidance. Investing involves risk and outcomes may vary. Add meaningful alt text; Run preflight.",
+    "expect": "PASS with zero findings unless you created another matching custom rule.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-062",
+    "group": "06 · Validation Center",
+    "title": "Warning-only review",
+    "steps": "Use a non-financial caption with image alt text empty. Validate.",
+    "expect": "WARN for missing alt text; approval is allowed because it is non-blocking.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-063",
+    "group": "06 · Validation Center",
+    "title": "Empty-body check",
+    "steps": "Create an empty draft, then Run preflight.",
+    "expect": "BLOCKED; CONTENT-001 should appear (and potentially A11Y-004).",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-064",
+    "group": "06 · Validation Center",
+    "title": "X character budget",
+    "steps": "Choose X, type >280 characters, add alt text, validate.",
+    "expect": "High finding PLT-X-011; local character count is approximate.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-065",
+    "group": "06 · Validation Center",
+    "title": "Instagram link warning",
+    "steps": "Choose Instagram; put https://example.com in non-financial caption and add alt text; validate.",
+    "expect": "WARN with LINK-006.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-066",
+    "group": "07 · Policy Studio",
+    "title": "Rule library tab",
+    "steps": "Click Rule library.",
+    "expect": "Baseline policy rules displayed; these are partly illustrative.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-067",
+    "group": "07 · Policy Studio",
+    "title": "Policy simulator tab",
+    "steps": "Click Policy simulator.",
+    "expect": "Simulation options and impact numbers appear.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-068",
+    "group": "07 · Policy Studio",
+    "title": "Advisory simulation",
+    "steps": "Choose Advisory in Proposed enforcement level.",
+    "expect": "Estimated impact changes, no real policy is published.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-069",
+    "group": "07 · Policy Studio",
+    "title": "Balanced simulation",
+    "steps": "Choose Balanced.",
+    "expect": "Estimated impact changes.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-070",
+    "group": "07 · Policy Studio",
+    "title": "Strict simulation",
+    "steps": "Choose Strict.",
+    "expect": "Estimated impact changes.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-071",
+    "group": "07 · Policy Studio",
+    "title": "Version history tab",
+    "steps": "Click Version history.",
+    "expect": "Illustrative historical versions shown.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-072",
+    "group": "07 · Policy Studio",
+    "title": "Add rule opens",
+    "steps": "Click Add rule.",
+    "expect": "Form with title, prohibited phrase and severity opens.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-073",
+    "group": "07 · Policy Studio",
+    "title": "Severity selector options",
+    "steps": "In Add rule dialog, open severity selector; choose Critical, High, Medium and Low in turn.",
+    "expect": "Four severity choices can be selected; rule is only saved when you click Save rule.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-074",
+    "group": "07 · Policy Studio",
+    "title": "Blank rule rejected",
+    "steps": "Leave rule title / phrase blank, click Save rule.",
+    "expect": "Error message, no new rule.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-075",
+    "group": "07 · Policy Studio",
+    "title": "Create custom rule",
+    "steps": "Title: Disallow magic profits. Phrase: magical profits guaranteed. Severity: High. Click Save rule.",
+    "expect": "New ORG-... rule appears, policy version changes.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-076",
+    "group": "07 · Policy Studio",
+    "title": "Duplicate phrase rejected",
+    "steps": "Create a second rule with exact same prohibited phrase.",
+    "expect": "Server rejects as duplicate (409); no duplicate created.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-077",
+    "group": "07 · Policy Studio",
+    "title": "Custom rule enforcement",
+    "steps": "Create draft with magical profits guaranteed; Run preflight.",
+    "expect": "High finding with ORG-... rule; draft BLOCKED.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-078",
+    "group": "07 · Policy Studio",
+    "title": "Publish version button",
+    "steps": "Click Publish version.",
+    "expect": "Design-only popup; no real policy activation workflow.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-079",
+    "group": "07 · Policy Studio",
+    "title": "Old approval after new policy",
+    "steps": "Validate and approve a clean draft, add another new rule, then attempt certificate on old draft.",
+    "expect": "Server rejects until the draft is validated again against current policy.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-080",
+    "group": "08 · Media Intelligence",
+    "title": "All filter",
+    "steps": "Click All.",
+    "expect": "Shows seeded demo assets and uploaded local assets.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-081",
+    "group": "08 · Media Intelligence",
+    "title": "Review filter",
+    "steps": "Click Review.",
+    "expect": "Shows assets not marked Ready.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-082",
+    "group": "08 · Media Intelligence",
+    "title": "Ready filter",
+    "steps": "Click Ready.",
+    "expect": "Shows assets marked Ready.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-083",
+    "group": "08 · Media Intelligence",
+    "title": "Upload asset opens",
+    "steps": "Click Upload asset.",
+    "expect": "Image selection and alt-text dialog opens.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-084",
+    "group": "08 · Media Intelligence",
+    "title": "No-file rejected",
+    "steps": "Click Upload image without selecting a file.",
+    "expect": "Error: Select a PNG or JPEG image.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-085",
+    "group": "08 · Media Intelligence",
+    "title": "Valid PNG upload",
+    "steps": "Choose PNG under 700 kB, enter alt text, click Upload image.",
+    "expect": "Asset appears with dimensions and Ready status.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-086",
+    "group": "08 · Media Intelligence",
+    "title": "Missing-alt upload",
+    "steps": "Upload a different small PNG/JPEG without alt text.",
+    "expect": "Asset saved with Needs review status.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-087",
+    "group": "08 · Media Intelligence",
+    "title": "Unsupported file rejected",
+    "steps": "Try PDF or GIF (browser may prevent choosing it).",
+    "expect": "Only PNG/JPEG supported; no incompatible asset should be saved.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-088",
+    "group": "08 · Media Intelligence",
+    "title": "Oversized file rejected",
+    "steps": "Try a PNG/JPEG above 700 kB.",
+    "expect": "Error, no asset stored.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-089",
+    "group": "08 · Media Intelligence",
+    "title": "Asset card click",
+    "steps": "Click an asset card.",
+    "expect": "Design-preview popup; asset detail viewer not implemented yet.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-090",
+    "group": "09 · Workflow Builder",
+    "title": "Workflow designer tab",
+    "steps": "Click Workflow designer.",
+    "expect": "Five-stage diagram appears.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-091",
+    "group": "09 · Workflow Builder",
+    "title": "Select Content validation node",
+    "steps": "Click the Content validation box in the flow diagram.",
+    "expect": "Step inspector updates to selected stage.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-092",
+    "group": "09 · Workflow Builder",
+    "title": "Select Risk classification node",
+    "steps": "Click the Risk classification box in the flow diagram.",
+    "expect": "Step inspector updates to selected stage.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-093",
+    "group": "09 · Workflow Builder",
+    "title": "Select Legal review node",
+    "steps": "Click the Legal review box in the flow diagram.",
+    "expect": "Step inspector updates to selected stage.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-094",
+    "group": "09 · Workflow Builder",
+    "title": "Select Brand review node",
+    "steps": "Click the Brand review box in the flow diagram.",
+    "expect": "Step inspector updates to selected stage.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-095",
+    "group": "09 · Workflow Builder",
+    "title": "Select Release approval node",
+    "steps": "Click the Release approval box in the flow diagram.",
+    "expect": "Step inspector updates to selected stage.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-096",
+    "group": "09 · Workflow Builder",
+    "title": "Test workflow",
+    "steps": "Click Test workflow.",
+    "expect": "Server returns a simulated trace; a toast reports step count, no publication.",
+    "kind": "Simulation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-097",
+    "group": "09 · Workflow Builder",
+    "title": "Execution history tab",
+    "steps": "Click Execution history.",
+    "expect": "Sample run-history table appears; not a real execution engine.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-098",
+    "group": "09 · Workflow Builder",
+    "title": "View execution history button",
+    "steps": "Click View execution history in page header.",
+    "expect": "Switches to Execution history tab.",
+    "kind": "Navigation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-099",
+    "group": "09 · Workflow Builder",
+    "title": "Templates tab",
+    "steps": "Click Templates.",
+    "expect": "Three simulated templates appear.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-100",
+    "group": "09 · Workflow Builder",
+    "title": "Preview template",
+    "steps": "Click Preview template.",
+    "expect": "Design-preview popup; no workflow template is installed.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-101",
+    "group": "09 · Workflow Builder",
+    "title": "Edit workflow step",
+    "steps": "Click Edit workflow step in inspector.",
+    "expect": "Design-preview popup; workflow is not editable/saved.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-102",
+    "group": "10 · Review Center",
+    "title": "Needs review tab",
+    "steps": "Click Needs review.",
+    "expect": "Pending/non-approved drafts show.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-103",
+    "group": "10 · Review Center",
+    "title": "Changes tab",
+    "steps": "Click Changes.",
+    "expect": "Changes requested drafts show.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-104",
+    "group": "10 · Review Center",
+    "title": "Completed tab",
+    "steps": "Click Completed.",
+    "expect": "Approved drafts show.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-105",
+    "group": "10 · Review Center",
+    "title": "All tab",
+    "steps": "Click All.",
+    "expect": "All drafts show.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-106",
+    "group": "10 · Review Center",
+    "title": "Select an inbox row",
+    "steps": "Click your QA draft in approval inbox.",
+    "expect": "Selected draft changes; approval actions target it.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-107",
+    "group": "10 · Review Center",
+    "title": "Request approval",
+    "steps": "Click Request approval in header.",
+    "expect": "Design-preview popup; no invitation/notification dispatched.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-108",
+    "group": "10 · Review Center",
+    "title": "Approve blocked content",
+    "steps": "Select risky draft with BLOCKED validation; click Approve selected draft.",
+    "expect": "Server rejects; no approval granted.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-109",
+    "group": "10 · Review Center",
+    "title": "Request changes",
+    "steps": "Select a draft; click Request changes.",
+    "expect": "Server records Changes requested status.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-110",
+    "group": "10 · Review Center",
+    "title": "Approve safe draft",
+    "steps": "Select validated clean QA draft, click Approve selected draft.",
+    "expect": "Server records Approved status; draft moves to Completed tab.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-111",
+    "group": "11 · Release Center",
+    "title": "Issue before validation",
+    "steps": "Select a new unvalidated draft; click Issue certificate.",
+    "expect": "Server rejects because current validation is required.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-112",
+    "group": "11 · Release Center",
+    "title": "Issue before approval",
+    "steps": "Select clean validated but unapproved draft; click Issue certificate.",
+    "expect": "Server rejects because review approval is required.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-113",
+    "group": "11 · Release Center",
+    "title": "Issue after approval",
+    "steps": "Select approved clean QA draft; click Issue certificate.",
+    "expect": "Certificate created; PF-REL-... appears, READY_FOR_HANDOFF only.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-114",
+    "group": "11 · Release Center",
+    "title": "Selected release versus new issue",
+    "steps": "Select a sample release row, then click Issue certificate while your QA draft is selected.",
+    "expect": "Certificate is issued for the currently selected draft, not the highlighted release row; note UX limitation.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-115",
+    "group": "11 · Release Center",
+    "title": "Select local release",
+    "steps": "Click the newly issued PF-REL-... table row.",
+    "expect": "Evidence panel changes to that release.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-116",
+    "group": "11 · Release Center",
+    "title": "Select sample release",
+    "steps": "Click PF-REL-2048 sample row.",
+    "expect": "Shows illustrative sample record, not a signed issued certificate.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-117",
+    "group": "11 · Release Center",
+    "title": "Copy certificate details",
+    "steps": "After issuing release, open certificate dialog and click Copy details.",
+    "expect": "Current UI copies a demo string rather than full verified evidence; record limitation.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-118",
+    "group": "11 · Release Center",
+    "title": "Export register",
+    "steps": "Click Export register.",
+    "expect": "Downloads audit JSON, not a dedicated release register.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-119",
+    "group": "11 · Release Center",
+    "title": "Verify via API",
+    "steps": "PowerShell: $r=Invoke-RestMethod http://127.0.0.1:8080/api/releases; Invoke-RestMethod \"http://127.0.0.1:8080/api/releases/$($r[0].id)/verify\"",
+    "expect": "signatureValid=True, published=False.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-120",
+    "group": "11 · Release Center",
+    "title": "Edit invalidates approval",
+    "steps": "Edit already-approved QA draft and click Issue certificate without revalidating/reapproving.",
+    "expect": "Server rejects a new certificate. Historical certificate remains valid.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-121",
+    "group": "12 · Compliance",
+    "title": "Select incident row",
+    "steps": "Click a listed incident.",
+    "expect": "Right-hand inspector updates to selected incident.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-122",
+    "group": "12 · Compliance",
+    "title": "Mark resolved",
+    "steps": "Select open incident and click Mark resolved.",
+    "expect": "Server stores Resolved; persists after refresh.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-123",
+    "group": "12 · Compliance",
+    "title": "Escalate",
+    "steps": "Click Escalate.",
+    "expect": "Design-preview popup; no external case is filed.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-124",
+    "group": "12 · Compliance",
+    "title": "Create incident",
+    "steps": "Click Create incident.",
+    "expect": "Design-preview popup; no real new incident.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-125",
+    "group": "12 · Compliance",
+    "title": "Export incident log",
+    "steps": "Click Export incident log.",
+    "expect": "Audit JSON downloads, not a dedicated incident export.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-126",
+    "group": "13 · Integrations",
+    "title": "Zernio Details",
+    "steps": "Find Zernio card and click Details.",
+    "expect": "Design-preview popup; no external connection or operation.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-127",
+    "group": "13 · Integrations",
+    "title": "Local Java API Details",
+    "steps": "Find Local Java API card and click Details.",
+    "expect": "Design-preview popup; no external connection or operation.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-128",
+    "group": "13 · Integrations",
+    "title": "Webhooks Details",
+    "steps": "Find Webhooks card and click Details.",
+    "expect": "Design-preview popup; no external connection or operation.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-129",
+    "group": "13 · Integrations",
+    "title": "Object storage Details",
+    "steps": "Find Object storage card and click Details.",
+    "expect": "Design-preview popup; no external connection or operation.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-130",
+    "group": "13 · Integrations",
+    "title": "API documentation",
+    "steps": "Click API documentation.",
+    "expect": "Design-preview popup; the local docs/API.md is the actual documentation.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-131",
+    "group": "13 · Integrations",
+    "title": "Add integration",
+    "steps": "Click Add integration.",
+    "expect": "Design-preview popup; no integration is created.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-132",
+    "group": "13 · Integrations",
+    "title": "Publishing disabled",
+    "steps": "Read Zernio and webhook status on cards.",
+    "expect": "Shows Not connected/Not configured; no Publish action actually posts.",
+    "kind": "Safety",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-133",
+    "group": "14 · Administration",
+    "title": "Invite member",
+    "steps": "Click Invite member.",
+    "expect": "Design-preview popup; no invite sent.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-134",
+    "group": "14 · Administration",
+    "title": "Toggle Mandatory legal sign-off",
+    "steps": "Click the switch for Mandatory legal sign-off; click it again.",
+    "expect": "Switch appearance changes locally, but does not change backend permissions or policy.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-135",
+    "group": "14 · Administration",
+    "title": "Toggle Audit trail enabled",
+    "steps": "Click the switch for Audit trail enabled; click it again.",
+    "expect": "Switch appearance changes locally, but does not change backend permissions or policy.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-136",
+    "group": "14 · Administration",
+    "title": "Toggle Reviewer notifications",
+    "steps": "Click the switch for Reviewer notifications; click it again.",
+    "expect": "Switch appearance changes locally, but does not change backend permissions or policy.",
+    "kind": "Demo",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-137",
+    "group": "14 · Administration",
+    "title": "Reload after toggle",
+    "steps": "Toggle a governance setting and refresh.",
+    "expect": "Preference may reset; these switches are illustrative, not persisted.",
+    "kind": "Known limitation",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-138",
+    "group": "14 · Administration",
+    "title": "Reset cancel path",
+    "steps": "Click Reset demo data, then Cancel in browser confirmation.",
+    "expect": "No data is deleted.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-139",
+    "group": "14 · Administration",
+    "title": "Reset confirm path — LAST",
+    "steps": "After all tests and after backup, click Reset demo data, then OK.",
+    "expect": "Seed records restored; test-created drafts/rules/releases reset.",
+    "kind": "Destructive",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-140",
+    "group": "15 · Reliability and errors",
+    "title": "Backend persistence",
+    "steps": "Save draft, stop server with Ctrl+C, restart run.bat, reopen browser.",
+    "expect": "Draft persists and health is UP.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-141",
+    "group": "15 · Reliability and errors",
+    "title": "Verify audit chain",
+    "steps": "PowerShell: (Invoke-RestMethod http://127.0.0.1:8080/api/audit).chainValid",
+    "expect": "True.",
+    "kind": "Functional",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-142",
+    "group": "15 · Reliability and errors",
+    "title": "Unknown API",
+    "steps": "PowerShell: try { Invoke-RestMethod http://127.0.0.1:8080/api/does-not-exist } catch { $_.Exception.Response.StatusCode }",
+    "expect": "Returns 404, server stays alive.",
+    "kind": "Functional",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-143",
+    "group": "15 · Reliability and errors",
+    "title": "Conflict-safe editing (API)",
+    "steps": "Run stale expectedVersion test in developer checklist / API guide.",
+    "expect": "Conflicting old revision is rejected with HTTP 409.",
+    "kind": "API-only",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-144",
+    "group": "15 · Reliability and errors",
+    "title": "Keep local only",
+    "steps": "Inspect /api/session and browser URL, do not configure public port forward.",
+    "expect": "App remains loopback-only, no external publishing.",
+    "kind": "Safety",
+    "priority": "Critical"
+  },
+  {
+    "id": "PF-QA-145",
+    "group": "15 · Reliability and errors",
+    "title": "Look for unintended changes",
+    "steps": "After pressing demo-only buttons, check Drafts and Audit.",
+    "expect": "Demo buttons should not create backend entities or claim external success.",
+    "kind": "UX review",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-146",
+    "group": "15 · Reliability and errors",
+    "title": "Accessibility keyboard navigation",
+    "steps": "Use Tab / Shift+Tab and Enter on menus/forms.",
+    "expect": "Visible focus, usable controls; report missing focus or keyboard support.",
+    "kind": "UX review",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-147",
+    "group": "15 · Reliability and errors",
+    "title": "Small-screen layout",
+    "steps": "Resize browser to phone-width or use browser developer responsive view.",
+    "expect": "Menu opens; content remains usable without broken overlap.",
+    "kind": "UX review",
+    "priority": "Normal"
+  },
+  {
+    "id": "PF-QA-148",
+    "group": "15 · Reliability and errors",
+    "title": "Console errors",
+    "steps": "Press F12, open Console, repeat basic workflow.",
+    "expect": "No uncaught exceptions (network errors from deliberate failures are explained).",
+    "kind": "Developer test",
+    "priority": "Normal"
+  }
+]
