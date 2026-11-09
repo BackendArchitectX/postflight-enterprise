@@ -12,6 +12,15 @@
     if (el) el.textContent = message;
     return el;
   };
+  // An example may be inspected without any login, key or network call.
+  document.addEventListener('click', event => {
+    if (event.target.id !== 'zernio-sample-btn') return;
+    const input = document.getElementById('zernio-profile-url');
+    if (input && input.form) {
+      input.value = 'https://www.linkedin.com/in/example';
+      input.form.requestSubmit();
+    }
+  });
   document.addEventListener('submit', async event => {
     if (event.target.id === 'zernio-link-preview') {
       event.preventDefault();
