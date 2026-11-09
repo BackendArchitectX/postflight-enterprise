@@ -8,6 +8,14 @@ public final class ApiDispatcher {
     private final PostFlightService service;
     public ApiDispatcher(PostFlightService service){this.service=service;}
     public Answer handle(String method,String rawPath,String body){
+      // Deliberately narrow public exception: pure in-memory analysis, no side effects.
+      if ("POST".equals(method) && "/api/demo/preflight".equals(rawPath)) {
+        try {
+          return out(200, DemoPreflight.inspect(Json.object(Json.parse(body))));
+        } catch (IllegalArgumentException e) {
+          return out(400, Map.of("error", e.getMessage()));
+        }
+      }
       // Public demo mode: block every state-changing API request.
       if ("true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"))
           && !"GET".equals(method) && !"HEAD".equals(method)) {
