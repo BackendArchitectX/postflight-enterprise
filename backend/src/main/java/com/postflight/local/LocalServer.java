@@ -38,6 +38,16 @@ public final class LocalServer implements AutoCloseable{
     if(ex.getRequestHeaders().getFirst("Content-Length")!=null){try{if(Long.parseLong(ex.getRequestHeaders().getFirst("Content-Length"))>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}}catch(NumberFormatException e){send(ex,400,"{\"error\":\"Invalid Content-Length\"}");return;}}
     byte[] request=ex.getRequestBody().readNBytes(1024*1024+1);
     if(request.length>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}
+    // Fixed GET-only Zernio proxy using the visitor's API key for this request.
+    // No credentials are saved, and there is no publishing or account-write operation.
+    if(path.equals("/api/zernio/accounts")){
+      if(!"GET".equals(method)){send(ex,405,Json.stringify(Map.of("error","Read-only endpoint")));return;}
+      try{
+        Map<String,Object> info=ZernioClient.inspectAccounts(ex.getRequestHeaders().getFirst("Authorization"));
+        send(ex,200,Json.stringify(info));
+      }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
+      return;
+    }
     ApiDispatcher.Answer result=api.handle(method,path,new String(request,StandardCharsets.UTF_8));send(ex,result.status(),result.json());return;
    }
    if(!"GET".equals(method)&&!"HEAD".equals(method)){send(ex,405,"Method not allowed");return;}
