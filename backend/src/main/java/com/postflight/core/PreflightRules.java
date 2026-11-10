@@ -6,7 +6,7 @@ import java.util.regex.*;
 /** Transparent deterministic policies; not legal advice or a substitute for platform API validation. */
 public final class PreflightRules {
     public static final String POLICY_VERSION="FIN-MKT-v3.4";
-    private static final Pattern GUARANTEE=Pattern.compile("\\b(guaranteed? (?:returns?|profits?|yield)|risk[ -]?free (?:returns?|profits?|investments?)|no risk (?:investment|returns?))\\b",Pattern.CASE_INSENSITIVE);
+    private static final Pattern GUARANTEE=Pattern.compile("\\b(guaranteed?\\s+(?:(?:up\\s+to\\s+)?\\d+(?:\\.\\d+)?\\s*%\\s*)?(?:returns?|profits?|yield)|risk[ -]?free (?:returns?|profits?|investments?)|no risk (?:investment|returns?))\\b",Pattern.CASE_INSENSITIVE);
     private static final Pattern FINANCIAL=Pattern.compile("\\b(invest(?:ment|ing|ments)?|returns?|profits?|financial products?|securities|yield)\\b",Pattern.CASE_INSENSITIVE);
     private static final Pattern DISCLAIMER=Pattern.compile("(?i)(invest(?:ing|ment|ments)? involves? risk|capital (?:is |may be )?at risk|past performance (?:is not|does not)|not investment advice)");
     private PreflightRules(){}
