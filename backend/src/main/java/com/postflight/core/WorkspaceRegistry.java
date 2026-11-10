@@ -11,13 +11,13 @@ import java.util.*;
 
 /**
  * Isolated authenticated-workspace domain. No legacy demo drafts/data are treated as tenants.
- * The caller MUST supply a principal obtained from a validated Cognito access token.
+ * The caller MUST supply a principal obtained from a validated Clerk user session.
  */
 public final class WorkspaceRegistry {
     public record Principal(String sub, String username) {
         public Principal {
             if (sub == null || sub.isBlank() || username == null || username.isBlank())
-                throw new IllegalArgumentException("Verified Cognito identity required");
+                throw new IllegalArgumentException("Verified Clerk identity required");
         }
     }
     public static final class Failure extends RuntimeException {
@@ -142,8 +142,8 @@ public final class WorkspaceRegistry {
         String target=required(req,"targetSub",100),selectedRole=required(req,"role",16);
         if(!List.of("ADMIN","REVIEWER","VIEWER").contains(selectedRole))
             throw new Failure(400,"Invited role must be ADMIN, REVIEWER or VIEWER");
-        if(!target.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
-            throw new Failure(400,"Target must be an existing Cognito user's UUID sub");
+        if(!target.matches("user_[A-Za-z0-9]{8,128}"))
+            throw new Failure(400,"Target must be an existing Clerk user ID");
         if(target.equals(actor.sub()))throw new Failure(400,"Cannot invite yourself");
         if(members(w).size()>=100)throw new Failure(409,"Workspace member limit reached");
         for(Map<String,Object> m:members(w))
