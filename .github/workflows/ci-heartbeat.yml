@@ -1,0 +1,79 @@
+# An independent GitHub scheduler checks for missed morning QA runs.
+# GitHub scheduled events are best-effort, so this heartbeat may also be delayed.
+name: PostFlight Scheduler Heartbeat
+
+on:
+  schedule:
+    # 09:10 and 12:10 IST: check and later self-resolve a delayed daily run.
+    - cron: '40 3,6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: postflight-scheduler-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  check-scheduled-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Detect missed daily run and track/resolve alert
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const {owner,repo}=context.repo;
+            const result=await github.rest.actions.listWorkflowRuns({
+              owner,repo,workflow_id:'complete-qa.yml',event:'schedule',per_page:10
+            });
+            const scheduled=result.data.workflow_runs||[];
+            const newest=scheduled[0];
+            const ageHours=newest?(Date.now()-Date.parse(newest.created_at))/3600000:Infinity;
+            const fresh=Number.isFinite(ageHours)&&ageHours<=25;
+            const marker='<!-- postflight-scheduler-heartbeat -->';
+            const title='[PostFlight CI] Scheduled full QA heartbeat missing';
+            const open=await github.paginate(github.rest.issues.listForRepo,{
+              owner,repo,state:'open',per_page:100
+            });
+            const incident=open.find(x=>!x.pull_request&&x.title===title&&
+              String(x.body||'').includes(marker));
+            if(fresh){
+              if(incident){
+                await github.rest.issues.createComment({
+                  owner,repo,issue_number:incident.number,
+                  body:'Scheduled QA activity has resumed: [latest run]('+newest.html_url+').'
+                });
+                await github.rest.issues.update({
+                  owner,repo,issue_number:incident.number,state:'closed',state_reason:'completed'
+                });
+              }
+              core.info('Scheduled QA heartbeat healthy. Latest run '+newest.html_url);
+              return;
+            }
+            const body=[
+              marker,
+              '## Missed scheduled QA heartbeat',
+              'No daily PostFlight Complete QA schedule run was recorded within the last 25 hours.',
+              '',
+              '- Expected daily time: **08:00 Asia/Kolkata** (02:30 UTC).',
+              '- Last recorded scheduled run: '+(newest?'[open]('+newest.html_url+')':'none'),
+              '- Last run age: '+(Number.isFinite(ageHours)?ageHours.toFixed(1)+' hours':'no history'),
+              '',
+              'Possible causes: GitHub scheduler delay, disabled workflow, inactive repository,',
+              'Actions quota/permissions, or GitHub platform disruption.',
+              '',
+              'Action: inspect the [Complete QA workflow](https://github.com/'+owner+'/'+repo+
+                '/actions/workflows/complete-qa.yml), then dispatch it manually if needed.',
+              'This heartbeat never modifies source or merges PRs.'
+            ].join('\n');
+            if(incident){
+              await github.rest.issues.update({owner,repo,issue_number:incident.number,body});
+            }else{
+              await github.rest.issues.create({owner,repo,title,body});
+            }
+            core.setFailed('Scheduled QA heartbeat is stale; GitHub issue opened or updated.');
