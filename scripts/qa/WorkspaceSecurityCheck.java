@@ -116,7 +116,7 @@ public final class WorkspaceSecurityCheck {
             String good=token(claims,pair.getPrivate(),header);
             ok(verifier.verifyWithPublicKeyForTest(good,(RSAPublicKey)pair.getPublic()).sub().equals(alice),
                 "Valid Clerk session was rejected");
-            String[] jwt=good.split("\\\\.");
+            String[] jwt=good.split("[.]");
             Map<String,Object> altered=new LinkedHashMap<>(claims);altered.put("sub",eve);
             String tampered=jwt[0]+"."+Base64.getUrlEncoder().withoutPadding().encodeToString(
                 Json.stringify(altered).getBytes(StandardCharsets.UTF_8))+"."+jwt[2];
