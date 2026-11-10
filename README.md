@@ -81,9 +81,9 @@ The test script creates temporary test data, checks the Java API, security rules
 
 **Works in the current `main` branch:** local drafts, checks, custom rules, review decisions, local approval requests, policy snapshots, workflow previews and step edits, image uploads, incidents, proof records, a read-only public demo and test scripts.
 
-**Not ready for real users:** login, secure shared team workspaces, sending invitation emails, real publishing or scheduling, and production data storage.
+**Not ready for real users:** production-hardened login, secure shared team workspaces, sending invitation emails, real publishing or scheduling, and production data storage.
 
-- **[PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5):** work in progress — Cognito login, secure workspaces and roles. Real login is not tested with an AWS user pool yet.
+- **Workspace authentication:** PR #5 introduced Cognito; the Clerk migration replaces its login and JWT verification. Real Clerk sign-in requires live testing with your own Clerk development instance.
 - **Scheduled CI ([merged PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6)):** scheduled checks, bounded retries and issue reporting are installed. Their real-world trigger/recovery behavior still needs a controlled live test.
 - **Real Zernio data:** possible read-only inspection using a restricted key, but live checks against a connected social account have not been verified.
 

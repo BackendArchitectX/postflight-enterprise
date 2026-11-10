@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed HTTP security tests for unconfigured and public Cognito workspaces."""
+"""Fail-closed HTTP security tests for unconfigured and public Clerk workspaces."""
 import json
 import sys
 import urllib.request

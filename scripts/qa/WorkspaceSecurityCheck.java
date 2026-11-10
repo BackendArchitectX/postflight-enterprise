@@ -26,7 +26,7 @@ public final class WorkspaceSecurityCheck {
     }
     private static void rejectJwt(Runnable work){
         try{work.run();throw new AssertionError("Invalid JWT was accepted");}
-        catch(CognitoAccessVerifier.AuthFailure e){ok(e.status==401,"Expected unauthorized JWT");}
+        catch(ClerkSessionVerifier.AuthFailure e){ok(e.status==401,"Expected unauthorized JWT");}
     }
     private static String token(Map<String,Object> claims,PrivateKey key,Map<String,Object> header)throws Exception{
         Base64.Encoder b=Base64.getUrlEncoder().withoutPadding();
@@ -38,10 +38,10 @@ public final class WorkspaceSecurityCheck {
     }
     public static void main(String[] args)throws Exception{
         Path folder=Files.createTempDirectory("postflight-workspaces-check-");
-        String alice="a8de7ff2-3b87-4e47-a319-dd8ce1168e90";
-        String bob="b7cc17dc-1d42-4ea4-bb45-cc28ed44be2e";
-        String carol="52b44098-4ab5-4969-ae7b-1766e8730fe2";
-        String eve="ea3df2ea-af41-4862-a050-450db123143d";
+        String alice="user_2RfWKJREkjKbHZy0Wqa5qrHe";
+        String bob="user_2RfWKJREkjKbHZy0Wqa5qrHd";
+        String carol="user_2RfWKJREkjKbHZy0Wqa5qrHc";
+        String eve="user_2RfWKJREkjKbHZy0Wqa5qrHb";
         WorkspaceRegistry.Principal owner=new WorkspaceRegistry.Principal(alice,"alice"),
             viewer=new WorkspaceRegistry.Principal(bob,"bob"),
             admin=new WorkspaceRegistry.Principal(carol,"carol"),
@@ -101,35 +101,41 @@ public final class WorkspaceSecurityCheck {
             ok(reloaded.members(owner,ws).size()==4,"Membership did not persist");
             ok(reloaded.workspaceAudit(owner,ws).size()>=6,"Audit events missing");
 
-            // Verify RSA signature and Cognito identity claims without a real user-pool account.
+            // Verify Clerk-like session JWT signatures and claims without a real account.
             KeyPairGenerator generator=KeyPairGenerator.getInstance("RSA");
             generator.initialize(2048);KeyPair pair=generator.generateKeyPair();
-            CognitoAccessVerifier verifier=new CognitoAccessVerifier("us-east-1_Test123","appClient123");
+            ClerkSessionVerifier verifier=new ClerkSessionVerifier(
+                "https://example.clerk.accounts.dev","http://127.0.0.1:8080");
             long now=Instant.now().getEpochSecond();
             Map<String,Object> claims=new LinkedHashMap<>(Map.of(
-                "iss",verifier.issuer(),"client_id",verifier.clientId(),"token_use","access",
-                "sub",alice,"username","alice","exp",now+3600,"iat",now-10));
+                "iss",verifier.issuer(),"azp",verifier.allowedOrigin(),
+                "sub","user_2RfWKJREkjKbHZy0Wqa5qrHe", "sid","sess_2Ro7e2IxrffdqBboq8KfB6eGb",
+                "exp",now+300,"iat",now-10,"nbf",now-10));
             Map<String,Object> header=Map.of("alg","RS256","kid","test-key","typ","JWT");
             String good=token(claims,pair.getPrivate(),header);
-            ok(verifier.verifyWithPublicKeyForTest(good,(RSAPublicKey)pair.getPublic()).sub().equals(alice),
-                "Valid Cognito-like RS256 token rejected");
+            ok(verifier.verifyWithPublicKeyForTest(good,(RSAPublicKey)pair.getPublic()).sub().equals(claims.get("sub")),
+                "Valid Clerk-like RS256 token rejected");
             String[] jwt=good.split("\\.");
-            Map<String,Object> altered=new LinkedHashMap<>(claims);altered.put("username","admin");
+            Map<String,Object> altered=new LinkedHashMap<>(claims);altered.put("sub","user_Evil00000000000000000000");
             String fake=jwt[0]+"."+Base64.getUrlEncoder().withoutPadding().encodeToString(
                 Json.stringify(altered).getBytes(StandardCharsets.UTF_8))+"."+jwt[2];
             rejectJwt(()->verifier.verifyWithPublicKeyForTest(fake,(RSAPublicKey)pair.getPublic()));
-            Map<String,Object> expired=new LinkedHashMap<>(claims);expired.put("exp",now-120);
-            rejectJwt(()->{try{verifier.verifyWithPublicKeyForTest(token(expired,pair.getPrivate(),header),(RSAPublicKey)pair.getPublic());}catch(CognitoAccessVerifier.AuthFailure e){throw e;}catch(Exception e){throw new AssertionError(e);}});
-            Map<String,Object> idClaims=new LinkedHashMap<>(claims);idClaims.put("token_use","id");
-            rejectJwt(()->{try{verifier.verifyWithPublicKeyForTest(token(idClaims,pair.getPrivate(),header),(RSAPublicKey)pair.getPublic());}catch(CognitoAccessVerifier.AuthFailure e){throw e;}catch(Exception e){throw new AssertionError(e);}});
-            Map<String,Object> otherClient=new LinkedHashMap<>(claims);otherClient.put("client_id","foreignClient");
-            rejectJwt(()->{try{verifier.verifyWithPublicKeyForTest(token(otherClient,pair.getPrivate(),header),(RSAPublicKey)pair.getPublic());}catch(CognitoAccessVerifier.AuthFailure e){throw e;}catch(Exception e){throw new AssertionError(e);}});
-            Map<String,Object> wrongIssuer=new LinkedHashMap<>(claims);wrongIssuer.put("iss","https://attacker.invalid");
-            rejectJwt(()->{try{verifier.verifyWithPublicKeyForTest(token(wrongIssuer,pair.getPrivate(),header),(RSAPublicKey)pair.getPublic());}catch(CognitoAccessVerifier.AuthFailure e){throw e;}catch(Exception e){throw new AssertionError(e);}});
-            Map<String,Object> unsignedHeader=Map.of("alg","none","kid","test-key");
-            rejectJwt(()->{try{verifier.verifyWithPublicKeyForTest(token(claims,pair.getPrivate(),unsignedHeader),(RSAPublicKey)pair.getPublic());}catch(CognitoAccessVerifier.AuthFailure e){throw e;}catch(Exception e){throw new AssertionError(e);}});
-            Map<String,Object> m2m=new LinkedHashMap<>(claims);m2m.remove("username");m2m.put("sub",verifier.clientId());
-            rejectJwt(()->{try{verifier.verifyWithPublicKeyForTest(token(m2m,pair.getPrivate(),header),(RSAPublicKey)pair.getPublic());}catch(CognitoAccessVerifier.AuthFailure e){throw e;}catch(Exception e){throw new AssertionError(e);}});
+            for(String field:List.of("iss","azp","sub","sid","sts","exp")){
+                Map<String,Object> bad=new LinkedHashMap<>(claims);
+                switch(field){
+                    case "iss" -> bad.put("iss","https://attacker.invalid");
+                    case "azp" -> bad.put("azp","https://attacker.invalid");
+                    case "sub" -> bad.put("sub","not_a_clerk_user");
+                    case "sid" -> bad.put("sid","not_a_session");
+                    case "sts" -> bad.put("sts","pending");
+                    case "exp" -> bad.put("exp",now-120);
+                }
+                final String invalid=token(bad,pair.getPrivate(),header);
+                rejectJwt(()->verifier.verifyWithPublicKeyForTest(invalid,(RSAPublicKey)pair.getPublic()));
+            }
+            Map<String,Object> unsigned=Map.of("alg","none","kid","test-key");
+            String none=token(claims,pair.getPrivate(),unsigned);
+            rejectJwt(()->verifier.verifyWithPublicKeyForTest(none,(RSAPublicKey)pair.getPublic()));
             System.out.println("PASS - "+passed+" tenant/RBAC/invitation/RS256 security assertions");
             System.out.println("PASS - isolated storage, cryptographic invitations, cross-tenant access denied");
         }finally{

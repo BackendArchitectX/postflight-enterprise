@@ -16,7 +16,7 @@ This version is a **single-user, localhost-only developer build**. It must not b
 
 ### Not implemented — blockers for external exposure
 
-- **No authentication** and no real role or tenant authorization. Local users can call administrative reset, add policy rules and approve drafts.
+- **Authenticated `/api/secure/*` workspaces only:** Clerk JWT validation and workspace roles are now available for private testing. The original shared demo domain is NOT tenant-scoped and is disabled whenever Clerk configuration is requested. Do not treat demo draft approval/release APIs as secure multi-user operations.
 - No signed/strongly authenticated approvals; reviewer names are only labels.
 - No TLS, CSRF token framework, rate limiting or IP firewall beyond loopback binding.
 - Local files are not a tamper-proof audit system and are not durable under machine loss; file writes are atomically renamed but not necessarily fsynced.

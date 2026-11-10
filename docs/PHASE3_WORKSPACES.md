@@ -1,3 +1,5 @@
+> **Historical document:** This page describes the now-replaced Cognito prototype from PR #5. The active Java SE login integration uses Clerk. See [Clerk authentication](CLERK_AUTH.md) for current setup.
+
 # Phase 3: authenticated workspace foundation (private alpha)
 
 This branch adds a **separate, Cognito-authenticated workspace domain** to the existing Java 17 local server. It does **not** convert the shared PostFlight demo drafts, reviews, rules, incidents or social accounts into secure multi-tenant resources. No real user data should be placed in those legacy APIs.
