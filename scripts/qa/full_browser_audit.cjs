@@ -19,7 +19,7 @@ const nestedKeys = ['data-route','data-action','data-timeframe','data-finding',
 const dangerous = new Set(['resetDemo','confirmDraft','confirmRule','confirmMedia','saveDraft',
                            'approveReview','requestChanges','certificate',
                            'resolveIncident','testWorkflow','confirmDelete']);
-const knownPlaceholder = new Set(['integrationDetails','addIntegration','workflowEdit','apiDocs','assetDetail']);
+const knownPlaceholder = new Set(['integrationDetails','addIntegration','apiDocs','assetDetail']);
 const result = {started:new Date().toISOString(),demoBase:base,editableBase:editBase,
   routeInventory:{},checks:[],skipped:[],warnings:[],errors:[],coverage:{}};
 fs.mkdirSync(output, {recursive:true});
@@ -40,6 +40,7 @@ async function awaitReady(p){
   await p.locator('main').waitFor({state:'visible',timeout:10000});
   await p.locator('header button[data-action="search"]').waitFor({state:'visible',timeout:10000});
   await p.locator('aside button.nav-item').first().waitFor({state:'visible',timeout:10000});
+  await p.locator('#app[data-hydrated="true"]').waitFor({state:'attached',timeout:12000});
   await p.locator('main h1').first().waitFor({state:'visible',timeout:10000});
 }
 let navigationId = 0;
@@ -339,6 +340,7 @@ async function deepProductChecks(p){
     const publications=await records.json();
     must(publications.some(x=>x.reviewedBy==='Browser QA Policy Reviewer'),'Publication not persisted');
     await dlg.getByRole('button',{name:'Refresh updated page'}).click();
+    await p.locator('#app[data-hydrated="true"]').waitFor({state:'attached',timeout:12000});
     await p.locator('[data-policy-tab="versions"]').click();
     await p.getByText('Browser test of immutable governance snapshot').waitFor();
   });
