@@ -35,7 +35,7 @@ assert 'workflow_run:' in guardian and 'types: [completed]' in guardian
 assert 'actions: write' in guardian and 'issues: write' in guardian
 assert 'run_attempt' in guardian and 'attempt===1' in guardian
 assert guardian.count('reRunFailedJobs')==1, 'retry must have exactly one callsite'
-assert 'state: ' in guardian and 'state_reason:' in guardian, 'recovery handling incomplete'
+assert "state:'closed'" in guardian and "state_reason:'completed'" in guardian, 'recovery handling incomplete'
 assert 'run.head_repository.full_name' in guardian, 'fork authorization guard missing'
 assert not re.search(r'uses:\s*actions/checkout@',guardian), 'privileged workflow may not check out PR code'
 assert not re.search(r'(?i)auto.?merge|mergepullrequest|createorupdatefilecontents',guardian), 'privileged auto-merge or mutation forbidden'
