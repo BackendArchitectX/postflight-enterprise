@@ -13,10 +13,12 @@ import java.util.concurrent.*;
 public final class LocalServer implements AutoCloseable{
  private final HttpServer server;
  private final ApiDispatcher api;
+ private final WorkspaceGateway workspaceGateway;
  private final Path web;
  public LocalServer(int port,Path root)throws Exception{
   Path data=root.resolve("data"),seed=root.resolve("docs/seed.json");web=root.resolve("web").toAbsolutePath().normalize();
   PostFlightService service=new PostFlightService(data,seed);api=new ApiDispatcher(service);
+  workspaceGateway=new WorkspaceGateway(root);
   String bindHost = "true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"))
       ? "0.0.0.0" : "127.0.0.1";
   server=HttpServer.create(new InetSocketAddress(bindHost,port),0);
@@ -68,13 +70,21 @@ public final class LocalServer implements AutoCloseable{
       }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
       return;
     }
-    ApiDispatcher.Answer result=api.handle(method,path,new String(request,StandardCharsets.UTF_8));send(ex,result.status(),result.json());return;
+    ApiDispatcher.Answer result=path.startsWith("/api/secure/")
+        ?workspaceGateway.handle(method,path,new String(request,StandardCharsets.UTF_8),ex.getRequestHeaders().getFirst("Authorization"))
+        :api.handle(method,path,new String(request,StandardCharsets.UTF_8));
+    send(ex,result.status(),result.json());return;
    }
    if(!"GET".equals(method)&&!"HEAD".equals(method)){send(ex,405,"Method not allowed");return;}
    Path file=(path.equals("/")?web.resolve("index.html"):web.resolve(path.substring(1))).normalize();
    if(!file.startsWith(web)||!Files.isRegularFile(file)){send(ex,404,"Not found");return;}
    h.set("Content-Type",path.endsWith(".js")?"text/javascript; charset=utf-8":path.endsWith(".css")?"text/css; charset=utf-8":path.endsWith(".png")?"image/png":path.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8");
-   h.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'");
+   String cognitoDomain=System.getenv("POSTFLIGHT_COGNITO_DOMAIN");
+   if(cognitoDomain==null)cognitoDomain="";
+   cognitoDomain=cognitoDomain.trim().replaceFirst("^https://","");
+   String cognitoConnect=CognitoAccessVerifier.configured()&&cognitoDomain.matches("[A-Za-z0-9.-]{5,253}")&&!cognitoDomain.startsWith(".")&&!cognitoDomain.endsWith(".")
+       ?" https://"+cognitoDomain:"";
+   h.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"+cognitoConnect+"; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
    if(path.equals("/")||path.endsWith(".html")||path.endsWith(".js")||path.endsWith(".css")) h.set("Cache-Control","no-cache, must-revalidate");
    byte[] bytes=Files.readAllBytes(file);ex.sendResponseHeaders(200,method.equals("HEAD")?-1:bytes.length);if(!method.equals("HEAD")){try(OutputStream out=ex.getResponseBody()){out.write(bytes);}}
   }catch(Exception e){try{send(ex,500,"Internal error");}catch(Exception ignored){}}finally{ex.close();}
