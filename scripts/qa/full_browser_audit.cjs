@@ -274,6 +274,93 @@ async function deepProductChecks(p){
     must(await p.locator('main [onload], main [onerror]').count()===0,'Active HTML attribute injected');
     must((await p.locator('main').innerText()).includes('<svg onload=alert(1)>'),'Owner not escaped as visible text');
   });
+  await check('Governance: all three public dialogs are read-only',async()=>{
+    const routesAndActions=[['reviews','requestApproval'],['policies','publishPolicy'],['workflows','workflowEdit']];
+    for(const [route,action] of routesAndActions){
+      await go(p,route);
+      await p.locator('[data-action="'+action+'"]').first().click();
+      const dlg=p.locator('.ops-dialog');
+      await dlg.waitFor({state:'visible'});
+      const submit=dlg.locator('button[type=submit]');
+      await submit.waitFor({state:'visible',timeout:6500});
+      must(await submit.isDisabled(),action+' was enabled in public read-only mode');
+      must((await dlg.innerText()).includes('Public demo is read-only'),'Public safety notice missing for '+action);
+      await dlg.getByRole('button',{name:'Close'}).first().click();
+    }
+    for(const uri of ['/api/approvals/requests','/api/policies/publications']){
+      const resp=await context.request.post(base+uri,{data:{},failOnStatusCode:false});
+      must(resp.status()===403,'Public governance write accepted: '+uri+' ('+resp.status()+')');
+    }
+  });
+  await check('Governance: approval request persists and appears in Review Center',async()=>{
+    const created=await context.request.post(editBase+'/api/drafts',{data:{
+      title:'QA browser governance request',body:'Investments involve risk. This is a sample campaign.',
+      platforms:'LinkedIn'
+    }});
+    must(created.status()===201,'Create draft failed');
+    const draft=await created.json();
+    const valid=await context.request.post(editBase+'/api/validations',{data:{
+      draftId:draft.id,platform:'LinkedIn',altText:'Sample campaign graphic'
+    }});
+    must(valid.status()===201,'Draft validation failed');
+    await go(p,'reviews',editBase);
+    await p.locator('[data-action="requestApproval"]').click();
+    const dlg=p.locator('.ops-dialog');
+    await dlg.locator('#gov-draftId').waitFor({state:'visible'});
+    await dlg.locator('#gov-draftId').selectOption(draft.id);
+    await dlg.locator('#gov-reviewer').fill('Browser QA Reviewer');
+    await dlg.locator('#gov-note').fill('Validation completed; request tracked');
+    await dlg.locator('button[type=submit]').click();
+    await dlg.getByText(/Created PF-APP-/).waitFor({timeout:7500});
+    const records=await context.request.get(editBase+'/api/approvals/requests');
+    must(records.status()===200,'List approval requests failed');
+    const requests=await records.json();
+    const saved=requests.find(x=>x.draftId===draft.id);
+    must(saved?.status==='Pending'&&saved.reviewer==='Browser QA Reviewer','Approval record missing');
+    await dlg.getByRole('button',{name:'Refresh updated page'}).click();
+    await p.getByText(saved.id).waitFor({timeout:6500});
+  });
+  await check('Governance: publish a reviewed snapshot and display version history',async()=>{
+    const newRule=await context.request.post(editBase+'/api/policies/rules',{
+      data:{title:'QA Browser unique compliance rule',phrase:'qa_browser_opaque_phrase_2026',severity:'Low'},
+      failOnStatusCode:false
+    });
+    must(newRule.status()===201,'Could not stage new version for snapshot');
+    await go(p,'policies',editBase);
+    await p.locator('[data-action="publishPolicy"]').click();
+    const dlg=p.locator('.ops-dialog');
+    await dlg.locator('#gov-reviewedBy').waitFor({state:'visible'});
+    await dlg.locator('#gov-reviewedBy').fill('Browser QA Policy Reviewer');
+    await dlg.locator('#gov-summary').fill('Browser test of immutable governance snapshot');
+    await dlg.locator('#gov-approval').fill('APPROVED');
+    await dlg.locator('button[type=submit]').click();
+    await dlg.getByText(/Immutable local snapshot PF-POL-/).waitFor({timeout:7500});
+    const records=await context.request.get(editBase+'/api/policies/publications');
+    const publications=await records.json();
+    must(publications.some(x=>x.reviewedBy==='Browser QA Policy Reviewer'),'Publication not persisted');
+    await dlg.getByRole('button',{name:'Refresh updated page'}).click();
+    await p.locator('[data-policy-tab="versions"]').click();
+    await p.getByText('Browser test of immutable governance snapshot').waitFor();
+  });
+  await check('Governance: edit workflow step, reload and see persisted revision',async()=>{
+    await go(p,'workflows',editBase);
+    await p.locator('[data-flow-node="Legal review"]').click();
+    await p.locator('[data-action="workflowEdit"]').click();
+    const dlg=p.locator('.ops-dialog');
+    await dlg.locator('#gov-owner').waitFor({state:'visible'});
+    await dlg.locator('#gov-owner').fill('Browser QA Legal Reviewer');
+    await dlg.locator('#gov-slaHours').fill('8');
+    await dlg.locator('#gov-onFailure').selectOption('Block release');
+    await dlg.locator('#gov-reason').fill('Browser test of persistent workflow step change');
+    await dlg.locator('button[type=submit]').click();
+    await dlg.getByText(/Legal review saved at revision/).waitFor({timeout:7500});
+    const settings=await context.request.get(editBase+'/api/workflows/steps');
+    must((await settings.json())['Legal review']?.owner==='Browser QA Legal Reviewer','Workflow settings were not persisted');
+    await dlg.getByRole('button',{name:'Refresh updated page'}).click();
+    await p.locator('[data-flow-node="Legal review"]').click();
+    await p.getByText('Browser QA Legal Reviewer').waitFor();
+    await p.getByText(/Block release · 8h/).waitFor();
+  });
   await check('Preflight: high-risk content blocked',async()=>{
     await go(p,'playground');
     await p.locator('[data-pf-sample="0"]').click();
