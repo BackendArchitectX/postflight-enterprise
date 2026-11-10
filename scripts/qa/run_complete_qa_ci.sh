@@ -7,12 +7,16 @@ find backend/src/main/java/com/postflight/core backend/src/main/java/com/postfli
 javac --release 17 -encoding UTF-8 -d build/qa-classes @build/qa-sources.txt
 javac --release 17 -encoding UTF-8 -cp build/qa-classes -d build/qa-classes scripts/qa/WorkspaceSecurityCheck.java
 java -cp build/qa-classes com.postflight.local.WorkspaceSecurityCheck
+javac --release 17 -encoding UTF-8 -cp build/qa-classes -d build/qa-classes scripts/qa/WorkspaceDraftSecurityCheck.java
+java -cp build/qa-classes com.postflight.local.WorkspaceDraftSecurityCheck
 node --check web/assets/app.js
 node --check web/assets/experience.js
 node --check web/assets/zernio-visitor.js
 node --check web/assets/secure-workspaces.js
 node --check scripts/qa/full_browser_audit.cjs
 python3 scripts/qa/check_scheduler_security.py
+python3 scripts/qa/test_audit_discovery.py
+python3 scripts/qa/test_ui_header.py
 node --check web/assets/operational-workflows.js
 node --check web/assets/governance-workflows.js
 
