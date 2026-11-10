@@ -324,6 +324,65 @@ async function deepProductChecks(p){
       must(resp.status()===403,'Public governance write accepted: '+uri+' ('+resp.status()+')');
     }
   });
+  await check('Studio: Save draft persists through API and page reload',async()=>{
+    const created=await context.request.post(editBase+'/api/drafts',{
+      data:{
+        title:'Disposable browser save test',
+        body:'Original draft content',
+        platforms:'LinkedIn'
+      },
+      failOnStatusCode:false
+    });
+
+    must(created.status()===201,'Draft creation failed');
+
+    const draft=await created.json();
+    const title='Verified saved draft '+draft.id;
+    const body='Browser QA persistence test for '+draft.id;
+
+    await go(p,'studio',editBase);
+    await p.locator('#draftSelect').selectOption(draft.id);
+
+    await p.locator('#draftTitle').fill(title);
+    await p.locator('#draftBody').fill(body);
+
+    const responsePromise=p.waitForResponse(
+      r=>r.request().method()==='PUT' &&
+         r.url().endsWith('/api/drafts/'+encodeURIComponent(draft.id)),
+      {timeout:10000}
+    );
+
+    await p.locator('button[data-action="saveDraft"]').click();
+
+    const response=await responsePromise;
+    must(response.status()===200,'Save draft API rejected the update');
+
+    const bootstrap=await context.request.get(editBase+'/api/bootstrap');
+    must(bootstrap.status()===200,'Backend reload failed');
+
+    const stored=(await bootstrap.json()).drafts.find(
+      x=>x.id===draft.id
+    );
+
+    must(!!stored,'Saved draft missing from backend');
+    must(stored.title===title,'Saved title did not persist');
+    must(stored.body===body,'Saved body did not persist');
+    must(stored.version>=2,'Draft version did not advance');
+
+    await go(p,'studio',editBase);
+    await p.locator('#draftSelect').selectOption(draft.id);
+
+    must(
+      (await p.locator('#draftTitle').inputValue())===title,
+      'Saved title disappeared after reload'
+    );
+
+    must(
+      (await p.locator('#draftBody').inputValue())===body,
+      'Saved body disappeared after reload'
+    );
+  });
+
   await check('Governance: approval request persists and appears in Review Center',async()=>{
     const created=await context.request.post(editBase+'/api/drafts',{data:{
       title:'QA browser governance request',body:'Investments involve risk. This is a sample campaign.',
@@ -549,6 +608,27 @@ async function deepProductChecks(p){
         return true;
       });
     }
+    const saveDraftTest =
+      'Studio: Save draft persists through API and page reload';
+
+    if(result.checks.some(x=>x.name===saveDraftTest&&x.status==='PASS')){
+      const studio=result.routeInventory.studio;
+      studio.coveredByDedicatedTests=[];
+
+      studio.notExercised=studio.notExercised.filter(entry=>{
+        if(entry.control?.key==='data-action' &&
+           entry.control?.value==='saveDraft'){
+          studio.coveredByDedicatedTests.push({
+            control:entry.control,
+            method:'browser click + API persistence + reload',
+            evidence:saveDraftTest
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+
    const unimplemented=Object.values(result.routeInventory).flatMap(x=>x.unimplemented||[]);
    const skippedControls=Object.values(result.routeInventory).flatMap(x=>x.notExercised||[]);
    result.coverage={
