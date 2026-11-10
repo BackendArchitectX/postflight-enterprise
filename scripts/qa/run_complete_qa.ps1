@@ -124,10 +124,12 @@ try {
     $summary += "PASS frontend state contracts"
 
     Write-Host "[5/7] Ensure temporary Playwright dependency exists"
-    if(-not (Test-Path (Join-Path $toolsRoot "node_modules\playwright\package.json"))){
+    $pwManifest=Join-Path $toolsRoot "node_modules\playwright\package.json"
+    $pwInstalled=if(Test-Path $pwManifest){(Get-Content $pwManifest -Raw | ConvertFrom-Json).version}else{""}
+    if($pwInstalled -ne "1.65.0"){
         New-Item -ItemType Directory -Force -Path $toolsRoot | Out-Null
-        & $npm.Source install --prefix $toolsRoot --no-save --no-audit --no-fund playwright
-        Assert-Exit "Playwright npm installation"
+        & $npm.Source install --prefix $toolsRoot --no-save --no-audit --no-fund playwright@1.65.0
+        Assert-Exit "Pinned Playwright npm installation"
     }
     $oldNodePath=$env:NODE_PATH
     $oldDemoUrl=$env:PF_QA_DEMO
