@@ -39,10 +39,17 @@ async function awaitReady(p){
   await p.locator('#app .app').waitFor({state:'visible',timeout:15000});
   await p.locator('main').waitFor({state:'visible',timeout:10000});
 }
+let navigationId = 0;
 async function go(p,route,host=base) {
-  await p.goto(host+'/#/'+route,{waitUntil:'domcontentloaded',timeout:18000});
+  // A hash-only navigation does not reset global SPA modal/search state.
+  // Force a real page reload with a unique same-origin query parameter.
+  // Otherwise a search overlay from the previous button would intercept
+  // every subsequent click and cause false failures.
+  try { await p.keyboard.press('Escape'); } catch (_) {}
+  const query='?qa_navigation='+String(++navigationId);
+  await p.goto(host+'/'+query+'#/'+route,{waitUntil:'domcontentloaded',timeout:18000});
   await awaitReady(p);
-  // A route must remain active after asynchronous bootstrap re-render.
+  await p.locator('.overlay.search-overlay').waitFor({state:'hidden',timeout:2500});
   await p.locator('main').waitFor({state:'visible'});
 }
 function metadataSignature(control) {
