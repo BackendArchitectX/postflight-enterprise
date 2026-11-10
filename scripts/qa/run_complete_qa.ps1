@@ -31,7 +31,7 @@ $project = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $project
 $branch = (git branch --show-current).Trim()
 Assert-Exit "Cannot read current branch"
-if ($branch -notin @("main","feat/zernio-visitor-readonly","feat/operational-workflows","feat/governance-workflows","feat/auth-workspaces-rbac")) { throw "Use a PostFlight development branch; currently on $branch" }
+if ($branch -notin @("main","feat/zernio-visitor-readonly","feat/operational-workflows","feat/governance-workflows","feat/auth-workspaces-rbac","feat/clerk-auth-workspaces")) { throw "Use a PostFlight development branch; currently on $branch" }
 if (-not (Test-Path "scripts\qa\full_browser_audit.cjs")) { throw "Missing QA script. Pull the latest feature branch first." }
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -100,8 +100,8 @@ try {
     & (Join-Path $jdk "bin\javac.exe") --release 17 -encoding UTF-8 -cp $classes -d $classes "scripts/qa/WorkspaceSecurityCheck.java"
     Assert-Exit "Workspace security test compilation failed"
     & (Join-Path $jdk "bin\java.exe") -cp $classes com.postflight.local.WorkspaceSecurityCheck
-    Assert-Exit "Workspace RBAC and JWT verification failed"
-    $summary += "PASS Cognito JWT and tenant isolation regression"
+    Assert-Exit "Clerk workspace RBAC and JWT verification failed"
+    $summary += "PASS Clerk JWT and tenant isolation regression"
     $root = Join-Path $work "runtime"
     New-Item -ItemType Directory -Force -Path (Join-Path $root "docs"),(Join-Path $root "data") | Out-Null
     Copy-Item "docs\seed.json" (Join-Path $root "docs\seed.json")
