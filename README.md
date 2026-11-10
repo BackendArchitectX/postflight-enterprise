@@ -72,7 +72,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\qa\run_complete_qa
 
 The test script creates temporary test data, checks the Java API, security rules and all 14 pages, then saves reports inside `qa-reports/`. It does **not** publish posts or change your real accounts.
 
-**GitHub Actions:** Open the **Actions** tab → choose **PostFlight Complete QA** → open a run to see its result. The proposed daily scheduler and automatic retry system are still in **[PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6)**; they do not run on a schedule until merged.
+**GitHub Actions:** Open **Actions → PostFlight Complete QA** to see test runs. The daily 8:00 AM India-time schedule and one-retry failure guardian are now installed on **main**. GitHub may delay scheduled jobs. Follow the [scheduler guide](docs/CI_SELF_HEALING.md) to check and test them; real unattended recovery is **not yet verified end to end**.
 
 ## 5. What works, and what does not
 
@@ -81,7 +81,7 @@ The test script creates temporary test data, checks the Java API, security rules
 **Not ready for real users:** login, secure shared team workspaces, sending invitation emails, real publishing or scheduling, and production data storage.
 
 - **[PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5):** work in progress — Cognito login, secure workspaces and roles. Real login is not tested with an AWS user pool yet.
-- **[PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6):** work in progress — daily GitHub testing, one retry for failed jobs and failure-report issues. This is not active on `main` yet.
+- **Scheduled CI ([merged PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6)):** scheduled checks, bounded retries and issue reporting are installed. Their real-world trigger/recovery behavior still needs a controlled live test.
 - **Real Zernio data:** possible read-only inspection using a restricted key, but live checks against a connected social account have not been verified.
 
 **Safety:** The online demo cannot save changes. The editable local app is for one developer, not for public hosting. Use test content, never social-media passwords or unrestricted API keys.
@@ -89,6 +89,7 @@ The test script creates temporary test data, checks the Java API, security rules
 ## 6. More help
 
 - **[Every workflow, explained simply](docs/WORKFLOW_GUIDE.md)**
+- [Daily GitHub testing and failure recovery](docs/CI_SELF_HEALING.md)
 - [How it is built](docs/ARCHITECTURE.md) · [API details](docs/API.md) · [Safety notes](docs/SECURITY.md)
 - [Figma design](https://www.figma.com/design/vj7eawzLm6VzDWtF2niFdC)
 - [GitHub issues](https://github.com/BackendArchitectX/postflight-enterprise/issues)
