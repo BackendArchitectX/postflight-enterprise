@@ -522,6 +522,33 @@ async function deepProductChecks(p){
      }
      await mobile.close();
    });
+    // Reconcile control inventory with independently verified browser evidence.
+    const previewTestName =
+      'Operations: all three workflow template previews show distinct server-defined steps';
+
+    const previewPassed = result.checks.some(
+      item => item.name === previewTestName && item.status === 'PASS'
+    );
+
+    if (previewPassed) {
+      const workflows = result.routeInventory.workflows;
+      workflows.coveredByDedicatedTests = [];
+
+      workflows.notExercised = workflows.notExercised.filter(entry => {
+        if (
+          entry.control?.key === 'data-action' &&
+          entry.control?.value === 'previewWorkflow'
+        ) {
+          workflows.coveredByDedicatedTests.push({
+            control: entry.control,
+            method: 'dedicated browser scenario',
+            evidence: previewTestName
+          });
+          return false;
+        }
+        return true;
+      });
+    }
    const unimplemented=Object.values(result.routeInventory).flatMap(x=>x.unimplemented||[]);
    const skippedControls=Object.values(result.routeInventory).flatMap(x=>x.notExercised||[]);
    result.coverage={
