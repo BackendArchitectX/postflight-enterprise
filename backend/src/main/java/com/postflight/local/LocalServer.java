@@ -70,6 +70,13 @@ public final class LocalServer implements AutoCloseable{
       }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
       return;
     }
+    // When Cognito is enabled, never expose the old shared, unauthenticated
+    // demo database as tenant data or allow legacy unscoped mutations.
+    if(CognitoAccessVerifier.configured()&&!path.startsWith("/api/secure/")
+        &&!path.equals("/api/health")&&!path.equals("/api/demo/preflight")){
+      send(ex,403,Json.stringify(Map.of("error","Legacy demo API disabled in authenticated mode; use /api/secure")));
+      return;
+    }
     ApiDispatcher.Answer result=path.startsWith("/api/secure/")
         ?workspaceGateway.handle(method,path,new String(request,StandardCharsets.UTF_8),ex.getRequestHeaders().getFirst("Authorization"))
         :api.handle(method,path,new String(request,StandardCharsets.UTF_8));
