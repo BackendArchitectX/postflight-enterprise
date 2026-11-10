@@ -140,6 +140,78 @@ public final class PostFlightService {
     }
     public synchronized Map<String,Object> workflowTest(Map<String,Object> req){String risk=optional(req,"risk","high",20);boolean high=risk.equalsIgnoreCase("high")||risk.equalsIgnoreCase("critical");List<Object> trace=new ArrayList<>();trace.add(doc("step","Content validation","status","PASS"));trace.add(doc("step","Risk classification","status",risk.toUpperCase(Locale.ROOT)));if(high)trace.add(doc("step","Legal review","status","REQUIRED"));trace.add(doc("step","Brand review","status","REQUIRED"));trace.add(doc("step","Release approval","status","PENDING"));return doc("simulation",true,"policy",PreflightRules.POLICY_VERSION,"trace",trace,"published",false);}
     public synchronized Map<String,Object> policySimulate(Map<String,Object> req){int strict=(int)longValue(req.get("strictness"),2);strict=Math.max(1,Math.min(5,strict));int affected=Math.min(list("drafts").size(),Math.max(0,strict-1)*2);return doc("simulation",true,"strictness",strict,"candidatePolicy","FIN-MKT-v3.5-draft","currentPolicy",activePolicy(),"draftsAffected",affected,"note","Estimated demonstration impact, not a server-wide regulatory assessment");}
+    /** Local-only incident registration. Public demo mutation protection lives in ApiDispatcher. */
+    public synchronized Map<String,Object> createIncident(Map<String,Object> req){
+        String title=required(req,"title",140);
+        String description=optional(req,"description","",2000);
+        String severity=optional(req,"severity","Medium",20);
+        if(!List.of("Critical","High","Medium","Low").contains(severity))
+            throw new ApiError(400,"Unsupported incident severity");
+        String owner=optional(req,"owner","Unassigned",100).trim();
+        if(owner.isBlank())owner="Unassigned";
+        String draftId=optional(req,"draftId","",80).trim();
+        if(!draftId.isEmpty())draft(draftId);
+        String id=nextId("PF-INC-");
+        String timestamp=now();
+        Map<String,Object> incident=doc("id",id,"title",title,"description",description,
+            "severity",severity,"owner",owner,"status","Open","source","Manual report",
+            "draftId",draftId,"createdAt",timestamp,"updatedAt",timestamp,
+            "escalationLevel",0,"escalations",new ArrayList<>());
+        list("alerts").add(0,incident);
+        audit("INCIDENT_CREATED",id,"local-developer",severity+" | "+title);
+        save();
+        return obj(Json.parse(Json.stringify(incident)));
+    }
+    /** Escalate a particular incident, preserving history and audit evidence. */
+    public synchronized Map<String,Object> escalateIncident(String id,Map<String,Object> req){
+        String reason=required(req,"reason",500);
+        String assignedTo=optional(req,"assignedTo","Compliance lead",100).trim();
+        if(assignedTo.isBlank())throw new ApiError(400,"assignedTo cannot be empty");
+        for(Map<String,Object> incident:list("alerts"))if(id.equals(get(incident,"id"))){
+            if("Resolved".equals(get(incident,"status")))
+                throw new ApiError(409,"Resolved incidents cannot be escalated; reopen for investigation first");
+            int level=(int)longValue(incident.get("escalationLevel"),0)+1;
+            if(level>5)throw new ApiError(409,"Maximum escalation level reached");
+            String timestamp=now();
+            List<Map<String,Object>> history;
+            if(incident.get("escalations")instanceof List<?>)history=rows(incident.get("escalations"));
+            else{history=new ArrayList<>();incident.put("escalations",history);}
+            history.add(doc("level",level,"reason",reason,"assignedTo",assignedTo,"at",timestamp,
+                "actor","local-developer"));
+            incident.put("escalationLevel",level);
+            incident.put("owner",assignedTo);
+            incident.put("status","Investigating");
+            incident.put("updatedAt",timestamp);
+            audit("INCIDENT_ESCALATED",id,"local-developer","Level "+level+" | "+reason);
+            save();
+            return obj(Json.parse(Json.stringify(incident)));
+        }
+        throw new ApiError(404,"Incident not found");
+    }
+    /** Versioned, read-only workflow templates used by the preview interface. */
+    public synchronized List<Map<String,Object>> workflowTemplates(){
+        return List.of(
+            doc("id","regulated","name","Regulated marketing","version","1.0",
+                "purpose","High-risk financial marketing approvals",
+                "stages",List.of(
+                    doc("name","Content validation","owner","Policy engine","required",true,"slaHours",1),
+                    doc("name","Legal review","owner","Compliance reviewer","required",true,"slaHours",24),
+                    doc("name","Brand review","owner","Brand reviewer","required",true,"slaHours",24),
+                    doc("name","Release approval","owner","Campaign owner","required",true,"slaHours",12))),
+            doc("id","standard","name","Standard campaign","version","1.0",
+                "purpose","General campaigns with two-step sign-off",
+                "stages",List.of(
+                    doc("name","Content validation","owner","Policy engine","required",true,"slaHours",1),
+                    doc("name","Brand review","owner","Brand reviewer","required",true,"slaHours",24),
+                    doc("name","Release approval","owner","Campaign owner","required",true,"slaHours",12))),
+            doc("id","emergency","name","Emergency correction","version","1.0",
+                "purpose","Time-sensitive corrections requiring compliance oversight",
+                "stages",List.of(
+                    doc("name","Incident verification","owner","Compliance lead","required",true,"slaHours",1),
+                    doc("name","Corrective content validation","owner","Policy engine","required",true,"slaHours",1),
+                    doc("name","Expedited release approval","owner","Campaign owner","required",true,"slaHours",2)))
+        );
+    }
     public synchronized Map<String,Object> updateIncident(String id,Map<String,Object> req){String status=required(req,"status",30);if(!List.of("Open","Investigating","Resolved").contains(status))throw new ApiError(400,"Unsupported incident status");for(Map<String,Object> a:list("alerts"))if(id.equals(get(a,"id"))){a.put("status",status);audit("INCIDENT_STATUS",id,"local-developer",status);save();return a;}throw new ApiError(404,"Incident not found");}
     public synchronized Map<String,Object> metrics(){int open=0,approved=0;for(Map<String,Object> d:list("drafts"))if("Approved".equals(get(d,"status")))approved++;for(Map<String,Object> a:list("alerts"))if(!"Resolved".equals(get(a,"status")))open++;return doc("totalDrafts",list("drafts").size(),"validations",list("validationRuns").size(),"approvedDrafts",approved,"releaseCertificates",list("releasesIssued").size(),"openIncidents",open,"illustrativeChart",true);}
     public synchronized Map<String,Object> auditReport(){List<Map<String,Object>> events=list("audit");String prev="GENESIS";boolean valid=true;for(Map<String,Object> e:events){String expected=sha256(prev+"|"+get(e,"id")+"|"+get(e,"at")+"|"+get(e,"action")+"|"+get(e,"entityId")+"|"+get(e,"actor")+"|"+get(e,"detail"));if(!prev.equals(get(e,"previousHash"))||!expected.equals(get(e,"hash"))){valid=false;break;}prev=get(e,"hash");}return doc("chainValid",valid,"events",copy(events),"note","File-backed hash chain is tamper-evident, not tamper-proof or WORM storage");}
