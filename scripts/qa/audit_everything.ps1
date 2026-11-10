@@ -31,7 +31,7 @@ if ($Mode -eq 'Complete' -or $Mode -eq 'Extended') {
   $commands.Add('Existing isolated complete-qa suite (Docker, Python, Playwright)')
 }
 if ($Mode -eq 'Extended') {
-  $commands.Add('Extended performance/accessibility/live role testing: BLOCKED until implemented')
+  $commands.Add('Extended disposable API and WCAG checks; unimplemented mandatory categories explicitly BLOCKED')
 }
 if ($Mode -eq 'LiveAuth') {
   $commands.Add('Supervised Clerk role test: BLOCKED (not automated)')
@@ -52,6 +52,36 @@ if ($Mode -eq 'LiveAuth') {
   Write-Host 'Use separate browser profiles for OWNER/VIEWER; test GET and denied POST/PUT on isolated workspaces.'
   exit 2
 }
+# Extended mode delegates to the existing verified Complete runner with additional
+# disposable API + accessibility tests, then generates a strict gap-aware report.
+if ($Mode -eq 'Extended') {
+  $startEpoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+  $extendedOut = Join-Path $root ('qa-reports\\extended-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+  $oldExtended = [Environment]::GetEnvironmentVariable('PF_EXTENDED_QA','Process')
+  try {
+    $env:PF_EXTENDED_QA = '1'
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'audit_everything.ps1') -Mode Complete
+    $completeExit = $LASTEXITCODE
+  } finally {
+    if ($null -eq $oldExtended) {
+      Remove-Item Env:PF_EXTENDED_QA -ErrorAction SilentlyContinue
+    } else {
+      $env:PF_EXTENDED_QA = $oldExtended
+    }
+  }
+  $py = Get-Command python.exe -ErrorAction SilentlyContinue
+  $pyArgs = @()
+  if (-not $py) { $py = Get-Command py.exe -ErrorAction Stop; $pyArgs = @('-3') }
+  & $py.Source @pyArgs (Join-Path $PSScriptRoot 'extended_report.py') `
+      --qa-root (Join-Path $root 'qa-reports') `
+      --output $extendedOut `
+      --started-epoch $startEpoch `
+      --complete-exit $completeExit
+  $extendedExit = $LASTEXITCODE
+  Write-Host ('Extended QA report: ' + $extendedOut)
+  exit $extendedExit
+}
+
 # Reject port/container conflicts instead of stopping or replacing unrelated resources.
 if ($Mode -eq 'Complete' -or $Mode -eq 'Extended') {
   foreach ($port in @(10003,10004)) {

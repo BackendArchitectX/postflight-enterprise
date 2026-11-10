@@ -31,7 +31,7 @@ $project = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $project
 $branch = (git branch --show-current).Trim()
 Assert-Exit "Cannot read current branch"
-if ($branch -notin @("main","feat/zernio-visitor-readonly","feat/operational-workflows","feat/governance-workflows","feat/auth-workspaces-rbac","feat/clerk-auth-migration","feat/workspace-scoped-workflows","feat/audit-v3-infrastructure")) { throw "Use a PostFlight development branch; currently on $branch" }
+if ($branch -notin @("main","feat/zernio-visitor-readonly","feat/operational-workflows","feat/governance-workflows","feat/auth-workspaces-rbac","feat/clerk-auth-migration","feat/workspace-scoped-workflows","feat/audit-v3-infrastructure","feat/extended-one-command-qa")) { throw "Use a PostFlight development branch; currently on $branch" }
 if (-not (Test-Path "scripts\qa\full_browser_audit.cjs")) { throw "Missing QA script. Pull the latest feature branch first." }
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -159,6 +159,18 @@ try {
         Write-Host "[6/7] Test 14 routes, buttons, nested tabs, modal interactions and user journeys"
         & $node.Source "scripts/qa/full_browser_audit.cjs"
         Assert-Exit "Browser UI audit"
+        if ($env:PF_EXTENDED_QA -eq '1') {
+            Write-Host 'EXTENDED QA: disposable API contract + negative security cases'
+            & $node.Source 'scripts/qa/extended_api_audit.cjs'
+            Assert-Exit 'Extended disposable API regression failed'
+            Write-Host 'EXTENDED QA: install pinned accessibility analyzer'
+            & $npm.Source install --prefix $toolsRoot --no-save --no-audit --no-fund playwright@1.65.0 axe-core@4.10.3
+            Assert-Exit 'Pinned axe-core accessibility installation failed'
+            Write-Host 'EXTENDED QA: WCAG accessibility scans on 14 public demo routes'
+            & $node.Source 'scripts/qa/extended_accessibility_audit.cjs'
+            Assert-Exit 'Extended accessibility audit failed'
+            $summary += 'PASS extended disposable API + automated accessibility scans'
+        }
     } finally {
         $env:NODE_PATH=$oldNodePath
         $env:PF_QA_DEMO=$oldDemoUrl
