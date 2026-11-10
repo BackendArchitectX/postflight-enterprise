@@ -711,6 +711,209 @@ async function deepProductChecks(p){
       'Change request disappeared after reload');
   });
 
+  await check('Governance: certificate UI issues verifiable local evidence without publishing',async()=>{
+    const create=async(title,body)=>{
+      const response=await context.request.post(editBase+'/api/drafts',{
+        data:{
+          title,
+          body,
+          platforms:'LinkedIn',
+          altText:'A financial education illustration'
+        },
+        failOnStatusCode:false
+      });
+      must(response.status()===201,'Draft creation failed');
+      return response.json();
+    };
+
+    const endpoint=editBase+'/api/releases';
+
+    const rejected=await create(
+      'QA unvalidated release candidate',
+      'A draft that has not completed review.'
+    );
+
+    await go(p,'releases',editBase);
+
+    const [denied]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='POST'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('.page-actions [data-action="certificate"]').click()
+    ]);
+
+    must(denied.status()===409,
+      'Certificate issued without validation or approval');
+
+    const rejectedSnapshot=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    must(!(rejectedSnapshot.releasesIssued||[])
+      .some(x=>x.draftId===rejected.id),
+      'Rejected release was persisted');
+
+    const draft=await create(
+      'QA approved certificate candidate',
+      'We support your financial journey. Investing involves risk and outcomes vary.'
+    );
+
+    const validation=await context.request.post(
+      editBase+'/api/validations',{
+        data:{
+          draftId:draft.id,
+          platform:'LinkedIn',
+          altText:'A financial education illustration'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(validation.status()===201,'Validation request failed');
+    must((await validation.json()).verdict==='PASS',
+      'Valid certificate candidate did not pass policy checks');
+
+    const review=await context.request.post(
+      editBase+'/api/reviews/'+encodeURIComponent(draft.id)+'/decision',{
+        data:{
+          decision:'Approved',
+          reviewer:'Browser QA Reviewer',
+          comment:'Validated disposable release candidate'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(review.status()===200,'Approval failed');
+    must((await review.json()).decision==='Approved',
+      'Incorrect review decision');
+
+    const before=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    const countBefore=(before.releasesIssued||[]).length;
+
+    await go(p,'releases',editBase);
+
+    const [issued]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='POST'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('.page-actions [data-action="certificate"]').click()
+    ]);
+
+    must(issued.status()===201,
+      'Approved draft did not receive certificate');
+
+    const certificate=await issued.json();
+
+    must(certificate.draftId===draft.id,
+      'Certificate references incorrect draft');
+    must(certificate.status==='READY_FOR_HANDOFF',
+      'Incorrect certificate state');
+    must(certificate.publishing==='NOT_CONFIGURED',
+      'Publishing unexpectedly enabled');
+    must(certificate.signatureAlgorithm==='HMAC-SHA256-LOCAL-DEMO',
+      'Unexpected signature algorithm');
+    must(typeof certificate.signature==='string'&&
+         certificate.signature.length>0,
+      'Certificate has no signature');
+
+    const modal=p.locator('.modal[role="dialog"]');
+
+    await modal.getByRole('heading',{
+      name:'Local release certificate'
+    }).waitFor({state:'visible',timeout:10000});
+
+    await modal.getByText(certificate.id,{
+      exact:true
+    }).waitFor({state:'visible'});
+
+    const after=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    const stored=(after.releasesIssued||[])
+      .find(x=>x.id===certificate.id);
+
+    must(!!stored,'Certificate not persisted');
+    must(stored.signature===certificate.signature,
+      'Persisted certificate signature changed');
+    must(after.releasesIssued.length===countBefore+1,
+      'Unexpected release count');
+
+    const verificationResponse=await context.request.get(
+      editBase+'/api/releases/'+encodeURIComponent(certificate.id)+'/verify'
+    );
+
+    must(verificationResponse.status()===200,
+      'Certificate verification endpoint failed');
+
+    const verified=await verificationResponse.json();
+
+    must(verified.signatureValid===true,
+      'Certificate signature invalid');
+    must(verified.published===false,
+      'Certificate incorrectly marked published');
+
+    await go(p,'releases',editBase);
+
+    await p.locator(
+      '[data-release="'+certificate.id+'"]'
+    ).waitFor({state:'visible'});
+
+    const revision=await context.request.put(
+      editBase+'/api/drafts/'+encodeURIComponent(draft.id),{
+        data:{
+          expectedVersion:draft.version,
+          body:'Updated after certificate issuance. New approval is required.'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(revision.status()===200,
+      'Post-certificate draft revision failed');
+
+    const historical=await context.request.get(
+      editBase+'/api/releases/'+encodeURIComponent(certificate.id)+'/verify'
+    );
+
+    must(historical.status()===200,
+      'Historical certificate verification failed');
+
+    must((await historical.json()).signatureValid===true,
+      'Historical evidence was invalidated by later draft editing');
+
+    const staleAttempt=await context.request.post(endpoint,{
+      data:{draftId:draft.id},
+      failOnStatusCode:false
+    });
+
+    must(staleAttempt.status()===409,
+      'Stale draft incorrectly received another release');
+
+    const finalState=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    must((finalState.releasesIssued||[])
+      .filter(x=>x.draftId===draft.id).length===1,
+      'Unexpected duplicate or stale release');
+
+    const audit=await (
+      await context.request.get(editBase+'/api/audit')
+    ).json();
+
+    must(audit.chainValid===true,'Audit chain invalid');
+    must(audit.events.some(x=>
+      x.action==='RELEASE_CERTIFICATE_ISSUED'&&
+      x.entityId===draft.id
+    ),'Certificate issuance missing from audit evidence');
+  });
   await check('Governance: approval request persists and appears in Review Center',async()=>{
     const created=await context.request.post(editBase+'/api/drafts',{data:{
       title:'QA browser governance request',body:'Investments involve risk. This is a sample campaign.',
@@ -1017,6 +1220,30 @@ async function deepProductChecks(p){
           evidence
         });
         return false;
+      });
+    }
+    const certificateTestName =
+      'Governance: certificate UI issues verifiable local evidence without publishing';
+
+    if(result.checks.some(
+      x=>x.name===certificateTestName&&x.status==='PASS'
+    )){
+      const releases=result.routeInventory.releases;
+
+      releases.coveredByDedicatedTests=
+        releases.coveredByDedicatedTests||[];
+
+      releases.notExercised=releases.notExercised.filter(entry=>{
+        if(entry.control?.key==='data-action'&&
+           entry.control?.value==='certificate'){
+          releases.coveredByDedicatedTests.push({
+            control:entry.control,
+            method:'real browser issuance + persistence + HMAC verification',
+            evidence:certificateTestName
+          });
+          return false;
+        }
+        return true;
       });
     }
    const unimplemented=Object.values(result.routeInventory).flatMap(x=>x.unimplemented||[]);
