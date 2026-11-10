@@ -142,7 +142,7 @@ public final class WorkspaceRegistry {
         String target=required(req,"targetSub",100),selectedRole=required(req,"role",16);
         if(!List.of("ADMIN","REVIEWER","VIEWER").contains(selectedRole))
             throw new Failure(400,"Invited role must be ADMIN, REVIEWER or VIEWER");
-        if(!target.matches("[0-9a-fA-F-]{36}"))
+        if(!target.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
             throw new Failure(400,"Target must be an existing Cognito user's UUID sub");
         if(target.equals(actor.sub()))throw new Failure(400,"Cannot invite yourself");
         if(members(w).size()>=100)throw new Failure(409,"Workspace member limit reached");
