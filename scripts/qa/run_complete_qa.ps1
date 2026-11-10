@@ -10,7 +10,7 @@ function Assert-Exit([string]$message) {
     if ($LASTEXITCODE -ne 0) { throw "$message (exit $LASTEXITCODE)" }
 }
 function Find-JDK {
-    $choices = @($env:POSTFLIGHT_QA_JDK_HOME, $env:JAVA_HOME, "C:\Program Files\Java\jdk-21", "C:\Program Files\Java\jdk-25", "C:\Program Files\Java\jdk-17")
+    $choices = @($env:POSTFLIGHT_QA_JDK_HOME, "C:\Program Files\Java\jdk-21", "C:\Program Files\Java\jdk-25", "C:\Program Files\Java\jdk-17", $env:JAVA_HOME)
     foreach($home in $choices) {
         if ($home -and (Test-Path (Join-Path $home "bin\javac.exe")) -and (Test-Path (Join-Path $home "bin\java.exe"))) { return $home }
     }
