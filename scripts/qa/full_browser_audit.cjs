@@ -243,6 +243,115 @@ async function deepProductChecks(p){
     }
     must(new Set(stageLengths).size>1,'All templates appear identical');
   });
+  await check('Operations: workflow simulation is isolated and does not publish',async()=>{
+    await go(p,'workflows');
+
+    const publicPosts=[];
+    const onRequest=req=>{
+      if(req.method()==='POST' &&
+         req.url().includes('/api/workflows/test')){
+        publicPosts.push(req.url());
+      }
+    };
+
+    p.on('request',onRequest);
+    try{
+      await p.locator('[data-action="testWorkflow"]').click();
+      await p.locator('#toasts .toast')
+        .filter({hasText:'Public demo is read-only'})
+        .waitFor({state:'visible',timeout:7000});
+    }finally{
+      p.off('request',onRequest);
+    }
+
+    must(publicPosts.length===0,
+      'Public mode attempted workflow execution');
+
+    const beforeResponse=
+      await context.request.get(editBase+'/api/bootstrap');
+
+    must(beforeResponse.status()===200,
+      'Editable backend unavailable');
+
+    const before=await beforeResponse.json();
+
+    await go(p,'workflows',editBase);
+
+    const [response]=await Promise.all([
+      p.waitForResponse(
+        r=>r.request().method()==='POST' &&
+           r.url()===editBase+'/api/workflows/test',
+        {timeout:10000}
+      ),
+      p.locator('[data-action="testWorkflow"]').click()
+    ]);
+
+    must(response.status()===200,
+      'Workflow simulation API failed');
+
+    const simulation=await response.json();
+
+    must(simulation.simulation===true,
+      'Response is not a simulation');
+
+    must(simulation.published===false,
+      'Simulation unexpectedly published content');
+
+    const actual=Array.isArray(simulation.trace)
+      ?simulation.trace.map(x=>x.step):[];
+
+    const expected=[
+      'Content validation',
+      'Risk classification',
+      'Legal review',
+      'Brand review',
+      'Release approval'
+    ];
+
+    must(JSON.stringify(actual)===JSON.stringify(expected),
+      'High-risk workflow stages are incorrect');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Workflow simulated server-side'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const afterResponse=
+      await context.request.get(editBase+'/api/bootstrap');
+
+    must(afterResponse.status()===200,
+      'Backend verification failed');
+
+    const after=await afterResponse.json();
+
+    must(
+      JSON.stringify(before.releasesIssued||[])===
+      JSON.stringify(after.releasesIssued||[]),
+      'Simulation unexpectedly issued a release'
+    );
+
+    must(
+      (before.audit||[]).length===(after.audit||[]).length,
+      'Simulation unexpectedly mutated the audit trail'
+    );
+
+    const lowResponse=await context.request.post(
+      editBase+'/api/workflows/test',
+      {data:{risk:'low'},failOnStatusCode:false}
+    );
+
+    must(lowResponse.status()===200,
+      'Low-risk simulation failed');
+
+    const low=await lowResponse.json();
+
+    must(
+      low.published===false &&
+      Array.isArray(low.trace) &&
+      !low.trace.some(x=>x.step==='Legal review'),
+      'Low-risk workflow incorrectly requires legal review'
+    );
+  });
+
   await check('Operations: public incident create and escalation cannot save changes',async()=>{
     await go(p,'incidents');
     await p.locator('[data-action="newIncident"]').click();
@@ -323,6 +432,487 @@ async function deepProductChecks(p){
       const resp=await context.request.post(base+uri,{data:{},failOnStatusCode:false});
       must(resp.status()===403,'Public governance write accepted: '+uri+' ('+resp.status()+')');
     }
+  });
+  await check('Studio: Save draft persists through API and page reload',async()=>{
+    const created=await context.request.post(editBase+'/api/drafts',{
+      data:{
+        title:'Disposable browser save test',
+        body:'Original draft content',
+        platforms:'LinkedIn'
+      },
+      failOnStatusCode:false
+    });
+
+    must(created.status()===201,'Draft creation failed');
+
+    const draft=await created.json();
+    const title='Verified saved draft '+draft.id;
+    const body='Browser QA persistence test for '+draft.id;
+
+    await go(p,'studio',editBase);
+    await p.locator('#draftSelect').selectOption(draft.id);
+
+    await p.locator('#draftTitle').fill(title);
+    await p.locator('#draftBody').fill(body);
+
+    await p.locator('button[data-action="saveDraft"]').click();
+
+    // Wait for the explicit Save action to finish, not an earlier autosave.
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Draft persisted to local Java backend'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const bootstrap=await context.request.get(editBase+'/api/bootstrap');
+    must(bootstrap.status()===200,'Backend reload failed');
+
+    const stored=(await bootstrap.json()).drafts.find(
+      x=>x.id===draft.id
+    );
+
+    must(!!stored,'Saved draft missing from backend');
+    must(stored.title===title,'Saved title did not persist');
+    must(stored.body===body,'Saved body did not persist');
+    must(stored.version>=2,'Draft version did not advance');
+
+    await go(p,'studio',editBase);
+    await p.locator('#draftSelect').selectOption(draft.id);
+
+    must(
+      (await p.locator('#draftTitle').inputValue())===title,
+      'Saved title disappeared after reload'
+    );
+
+    must(
+      (await p.locator('#draftBody').inputValue())===body,
+      'Saved body disappeared after reload'
+    );
+  });
+
+  await check('Governance: approval UI enforces gates and invalidates stale approval',async()=>{
+    const create=async(title,body,altText='')=>{
+      const r=await context.request.post(editBase+'/api/drafts',{
+        data:{title,body,platforms:'LinkedIn',altText},
+        failOnStatusCode:false
+      });
+      must(r.status()===201,'Could not create disposable draft');
+      return r.json();
+    };
+
+    const attempt=async id=>{
+      await go(p,'reviews',editBase);
+      const row=p.locator('[data-review-select="'+id+'"]');
+      await row.waitFor({state:'visible',timeout:7000});
+      await row.click();
+
+      await p.getByText(
+        'Actions below save a local server decision for '+id,
+        {exact:false}
+      ).waitFor();
+
+      const endpoint=editBase+'/api/reviews/'+encodeURIComponent(id)+'/decision';
+      const [response]=await Promise.all([
+        p.waitForResponse(r=>
+          r.request().method()==='POST'&&r.url()===endpoint,
+          {timeout:12000}
+        ),
+        p.locator('[data-action="approveReview"]').click()
+      ]);
+      return response;
+    };
+
+    const unvalidated=await create(
+      'QA draft without validation',
+      'A general financial education update.'
+    );
+
+    const noValidation=await attempt(unvalidated.id);
+    must(noValidation.status()===409,
+      'Unvalidated draft was incorrectly approved');
+
+    const blocked=await create(
+      'QA blocked claim',
+      'Guaranteed returns with no risk. Guaranteed profits.'
+    );
+
+    const blockedRun=await context.request.post(
+      editBase+'/api/validations',{
+        data:{draftId:blocked.id,platform:'LinkedIn',altText:''}
+      }
+    );
+
+    must(blockedRun.status()===201,'Blocked-content validation failed');
+    must((await blockedRun.json()).verdict==='BLOCKED',
+      'Unsafe sample did not trigger blocking findings');
+
+    const blockedApproval=await attempt(blocked.id);
+    must(blockedApproval.status()===409,
+      'Blocked content was incorrectly approved');
+
+    const good=await create(
+      'QA compliant approval candidate',
+      'We support your financial journey. Investing involves risk and outcomes vary.',
+      'A thoughtful financial wellness illustration.'
+    );
+
+    const goodRun=await context.request.post(
+      editBase+'/api/validations',{
+        data:{draftId:good.id,platform:'LinkedIn',altText:'A thoughtful financial wellness illustration.'}
+      }
+    );
+
+    must(goodRun.status()===201,'Clean validation failed');
+    must((await goodRun.json()).verdict==='PASS',
+      'Compliant sample unexpectedly blocked');
+
+    const approved=await attempt(good.id);
+    must(approved.status()===200,
+      'Approved UI action rejected');
+
+    must((await approved.json()).decision==='Approved',
+      'Incorrect approval decision returned');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Server review decision: Approved'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const snapshotResponse=await context.request.get(
+      editBase+'/api/bootstrap'
+    );
+    must(snapshotResponse.status()===200,'Bootstrap verification failed');
+
+    const snapshot=await snapshotResponse.json();
+    const stored=snapshot.drafts.find(d=>d.id===good.id);
+
+    must(stored?.status==='Approved',
+      'Approved status not persisted');
+    must(snapshot.reviewStatus[good.id]==='Approved',
+      'Review decision not persisted');
+    must(snapshot.reviewStatus[blocked.id]!=='Approved',
+      'Blocked draft incorrectly approved');
+    must(snapshot.reviewStatus[unvalidated.id]!=='Approved',
+      'Unvalidated draft incorrectly approved');
+
+    await go(p,'reviews',editBase);
+    await p.locator('[data-review-tab="completed"]').click();
+
+    const approvedRow=p.locator(
+      '[data-review-select="'+good.id+'"]'
+    );
+    await approvedRow.waitFor({state:'visible'});
+    must((await approvedRow.innerText()).includes('Approved'),
+      'Approval disappeared after reload');
+
+    const editResponse=await context.request.put(
+      editBase+'/api/drafts/'+encodeURIComponent(good.id),{
+        data:{
+          body:'Content updated after approval. The prior approval must expire.'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(editResponse.status()===200,'Post-approval edit failed');
+
+    const modified=await editResponse.json();
+    must(modified.version>stored.version,
+      'Draft version did not advance after editing');
+
+    const latest=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    must(latest.reviewStatus[good.id]==='Changes requested',
+      'Previous approval survived a content change');
+
+    await go(p,'reviews',editBase);
+    await p.locator('[data-review-tab="changes"]').click();
+    await p.locator(
+      '[data-review-select="'+good.id+'"]'
+    ).waitFor({state:'visible'});
+  });
+
+  await check('Governance: request changes persists with audit evidence',async()=>{
+    const created=await context.request.post(
+      editBase+'/api/drafts',{
+        data:{
+          title:'QA change request candidate',
+          body:'Draft requiring an editorial revision.',
+          platforms:'LinkedIn'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(created.status()===201,'Draft creation failed');
+    const draft=await created.json();
+
+    await go(p,'reviews',editBase);
+
+    const row=p.locator('[data-review-select="'+draft.id+'"]');
+    await row.waitFor({state:'visible'});
+    await row.click();
+
+    await p.getByText(
+      'Actions below save a local server decision for '+draft.id,
+      {exact:false}
+    ).waitFor();
+
+    const endpoint=editBase+'/api/reviews/'+encodeURIComponent(draft.id)+'/decision';
+
+    const [response]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='POST'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('[data-action="requestChanges"]').click()
+    ]);
+
+    must(response.status()===200,'Request Changes action failed');
+    must((await response.json()).decision==='Changes requested',
+      'Incorrect decision returned');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Server review decision: Changes requested'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const bootstrap=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    const saved=bootstrap.drafts.find(d=>d.id===draft.id);
+    must(saved?.status==='Changes requested',
+      'Change request not persisted');
+
+    must(bootstrap.reviewStatus[draft.id]==='Changes requested',
+      'Review status mismatch');
+
+    const auditResponse=await context.request.get(
+      editBase+'/api/audit'
+    );
+    must(auditResponse.status()===200,'Audit verification failed');
+
+    const audit=await auditResponse.json();
+    must(audit.chainValid===true,'Audit hash chain invalid');
+
+    must(audit.events.some(e=>
+      e.action==='REVIEW_CHANGES_REQUESTED' &&
+      e.entityId===draft.id
+    ),'Change request missing from the audit trail');
+
+    await go(p,'reviews',editBase);
+    await p.locator('[data-review-tab="changes"]').click();
+
+    const persisted=p.locator(
+      '[data-review-select="'+draft.id+'"]'
+    );
+
+    await persisted.waitFor({state:'visible'});
+    must((await persisted.innerText()).includes('Changes requested'),
+      'Change request disappeared after reload');
+  });
+
+  await check('Governance: certificate UI issues verifiable local evidence without publishing',async()=>{
+    const create=async(title,body)=>{
+      const response=await context.request.post(editBase+'/api/drafts',{
+        data:{
+          title,
+          body,
+          platforms:'LinkedIn',
+          altText:'A financial education illustration'
+        },
+        failOnStatusCode:false
+      });
+      must(response.status()===201,'Draft creation failed');
+      return response.json();
+    };
+
+    const endpoint=editBase+'/api/releases';
+
+    const rejected=await create(
+      'QA unvalidated release candidate',
+      'A draft that has not completed review.'
+    );
+
+    await go(p,'releases',editBase);
+
+    const [denied]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='POST'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('.page-actions [data-action="certificate"]').click()
+    ]);
+
+    must(denied.status()===409,
+      'Certificate issued without validation or approval');
+
+    const rejectedSnapshot=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    must(!(rejectedSnapshot.releasesIssued||[])
+      .some(x=>x.draftId===rejected.id),
+      'Rejected release was persisted');
+
+    const draft=await create(
+      'QA approved certificate candidate',
+      'We support your financial journey. Investing involves risk and outcomes vary.'
+    );
+
+    const validation=await context.request.post(
+      editBase+'/api/validations',{
+        data:{
+          draftId:draft.id,
+          platform:'LinkedIn',
+          altText:'A financial education illustration'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(validation.status()===201,'Validation request failed');
+    must((await validation.json()).verdict==='PASS',
+      'Valid certificate candidate did not pass policy checks');
+
+    const review=await context.request.post(
+      editBase+'/api/reviews/'+encodeURIComponent(draft.id)+'/decision',{
+        data:{
+          decision:'Approved',
+          reviewer:'Browser QA Reviewer',
+          comment:'Validated disposable release candidate'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(review.status()===200,'Approval failed');
+    must((await review.json()).decision==='Approved',
+      'Incorrect review decision');
+
+    const before=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    const countBefore=(before.releasesIssued||[]).length;
+
+    await go(p,'releases',editBase);
+
+    const [issued]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='POST'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('.page-actions [data-action="certificate"]').click()
+    ]);
+
+    must(issued.status()===201,
+      'Approved draft did not receive certificate');
+
+    const certificate=await issued.json();
+
+    must(certificate.draftId===draft.id,
+      'Certificate references incorrect draft');
+    must(certificate.status==='READY_FOR_HANDOFF',
+      'Incorrect certificate state');
+    must(certificate.publishing==='NOT_CONFIGURED',
+      'Publishing unexpectedly enabled');
+    must(certificate.signatureAlgorithm==='HMAC-SHA256-LOCAL-DEMO',
+      'Unexpected signature algorithm');
+    must(typeof certificate.signature==='string'&&
+         certificate.signature.length>0,
+      'Certificate has no signature');
+
+    const modal=p.locator('.modal[role="dialog"]');
+
+    await modal.getByRole('heading',{
+      name:'Local release certificate'
+    }).waitFor({state:'visible',timeout:10000});
+
+    await modal.getByText(certificate.id,{
+      exact:true
+    }).waitFor({state:'visible'});
+
+    const after=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    const stored=(after.releasesIssued||[])
+      .find(x=>x.id===certificate.id);
+
+    must(!!stored,'Certificate not persisted');
+    must(stored.signature===certificate.signature,
+      'Persisted certificate signature changed');
+    must(after.releasesIssued.length===countBefore+1,
+      'Unexpected release count');
+
+    const verificationResponse=await context.request.get(
+      editBase+'/api/releases/'+encodeURIComponent(certificate.id)+'/verify'
+    );
+
+    must(verificationResponse.status()===200,
+      'Certificate verification endpoint failed');
+
+    const verified=await verificationResponse.json();
+
+    must(verified.signatureValid===true,
+      'Certificate signature invalid');
+    must(verified.published===false,
+      'Certificate incorrectly marked published');
+
+    await go(p,'releases',editBase);
+
+    await p.locator(
+      '[data-release="'+certificate.id+'"]'
+    ).waitFor({state:'visible'});
+
+    const revision=await context.request.put(
+      editBase+'/api/drafts/'+encodeURIComponent(draft.id),{
+        data:{
+          expectedVersion:draft.version,
+          body:'Updated after certificate issuance. New approval is required.'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(revision.status()===200,
+      'Post-certificate draft revision failed');
+
+    const historical=await context.request.get(
+      editBase+'/api/releases/'+encodeURIComponent(certificate.id)+'/verify'
+    );
+
+    must(historical.status()===200,
+      'Historical certificate verification failed');
+
+    must((await historical.json()).signatureValid===true,
+      'Historical evidence was invalidated by later draft editing');
+
+    const staleAttempt=await context.request.post(endpoint,{
+      data:{draftId:draft.id},
+      failOnStatusCode:false
+    });
+
+    must(staleAttempt.status()===409,
+      'Stale draft incorrectly received another release');
+
+    const finalState=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    must((finalState.releasesIssued||[])
+      .filter(x=>x.draftId===draft.id).length===1,
+      'Unexpected duplicate or stale release');
+
+    const audit=await (
+      await context.request.get(editBase+'/api/audit')
+    ).json();
+
+    must(audit.chainValid===true,'Audit chain invalid');
+    must(audit.events.some(x=>
+      x.action==='RELEASE_CERTIFICATE_ISSUED'&&
+      x.entityId===draft.id
+    ),'Certificate issuance missing from audit evidence');
   });
   await check('Governance: approval request persists and appears in Review Center',async()=>{
     const created=await context.request.post(editBase+'/api/drafts',{data:{
@@ -482,6 +1072,355 @@ async function deepProductChecks(p){
     must(JSON.stringify(left.drafts)===JSON.stringify(right.drafts),'Public drafts mutated');
     must(left.runtime.mode==='public-read-only','Public mode missing');
   });
+  await check('Operations: incident resolution persists with audit evidence',async()=>{
+    await go(p,'incidents');
+
+    const publicRequests=[];
+    const publicObserver=req=>{
+      if(req.method()==='PATCH'&&
+         req.url().includes('/api/incidents/')){
+        publicRequests.push(req.url());
+      }
+    };
+
+    p.on('request',publicObserver);
+    try{
+      await p.locator('[data-action="resolveIncident"]').click();
+      await p.locator('#toasts .toast')
+        .filter({hasText:'Public demo is read-only'})
+        .waitFor({state:'visible',timeout:7000});
+    }finally{
+      p.off('request',publicObserver);
+    }
+
+    must(publicRequests.length===0,
+      'Public UI attempted incident mutation');
+
+    const created=await context.request.post(
+      editBase+'/api/incidents',{
+        data:{
+          title:'QA browser incident resolution',
+          description:'Disposable incident for resolution lifecycle',
+          owner:'Browser QA Operations',
+          severity:'Medium'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(created.status()===201,'Incident creation failed');
+
+    const incident=await created.json();
+    must(incident.status==='Open','New incident was not Open');
+
+    await go(p,'incidents',editBase);
+
+    const row=p.locator(
+      'tr[data-incident="'+incident.id+'"]'
+    );
+
+    await row.waitFor({state:'visible',timeout:7000});
+    await row.click();
+
+    const endpoint=editBase+'/api/incidents/'+encodeURIComponent(incident.id);
+
+    const [response]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='PATCH'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('[data-action="resolveIncident"]').click()
+    ]);
+
+    must(response.status()===200,
+      'Incident resolution request failed');
+
+    const resolved=await response.json();
+
+    must(resolved.id===incident.id&&resolved.status==='Resolved',
+      'Backend returned incorrect resolution state');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Incident status saved on server'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const incidentsResponse=await context.request.get(
+      editBase+'/api/incidents'
+    );
+
+    must(incidentsResponse.status()===200,
+      'Incident listing failed');
+
+    const incidents=await incidentsResponse.json();
+
+    must(incidents.some(x=>
+      x.id===incident.id&&x.status==='Resolved'
+    ),'Resolved incident was not persisted');
+
+    const auditResponse=await context.request.get(
+      editBase+'/api/audit'
+    );
+
+    must(auditResponse.status()===200,
+      'Incident audit retrieval failed');
+
+    const audit=await auditResponse.json();
+
+    must(audit.chainValid===true,
+      'Audit chain invalid');
+
+    must(audit.events.some(e=>
+      e.action==='INCIDENT_STATUS'&&
+      e.entityId===incident.id&&
+      e.detail==='Resolved'
+    ),'Resolution audit event missing');
+
+    await go(p,'incidents',editBase);
+
+    const persisted=p.locator(
+      'tr[data-incident="'+incident.id+'"]'
+    );
+
+    await persisted.waitFor({state:'visible'});
+
+    must((await persisted.innerText()).includes('Resolved'),
+      'Resolved status disappeared after reload');
+
+    const escalation=await context.request.post(
+      editBase+'/api/incidents/'+encodeURIComponent(incident.id)+'/escalate',{
+        data:{
+          reason:'QA must reject escalation of resolved incidents',
+          assignedTo:'Browser QA Operations'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(escalation.status()===409,
+      'Resolved incident could still be escalated');
+  });
+
+  // Deliberately LAST: resets only the disposable editable QA server.
+  await check('Safety: demo reset requires confirmation and restores disposable seed',async()=>{
+    const publicReset=await context.request.post(
+      base+'/api/admin/reset',{
+        data:{},
+        failOnStatusCode:false
+      }
+    );
+
+    must(publicReset.status()===403,
+      'Public demo reset endpoint was writable');
+
+    const canaryDraftResponse=await context.request.post(
+      editBase+'/api/drafts',{
+        data:{
+          title:'QA disposable reset canary',
+          body:'This draft must disappear after reset.',
+          platforms:'LinkedIn'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(canaryDraftResponse.status()===201,
+      'Could not prepare reset canary draft');
+
+    const canaryDraft=await canaryDraftResponse.json();
+
+    const canaryIncidentResponse=await context.request.post(
+      editBase+'/api/incidents',{
+        data:{
+          title:'QA disposable reset canary incident',
+          description:'This incident must disappear after reset',
+          owner:'Browser QA',
+          severity:'Low'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(canaryIncidentResponse.status()===201,
+      'Could not prepare reset canary incident');
+
+    const canaryIncident=await canaryIncidentResponse.json();
+
+    const publicBeforeResponse=await context.request.get(
+      base+'/api/bootstrap'
+    );
+
+    must(publicBeforeResponse.status()===200,
+      'Public baseline unavailable');
+
+    const publicBefore=await publicBeforeResponse.json();
+
+    const resetUrl=editBase+'/api/admin/reset';
+
+    // Separate page avoids the global auto-dismiss dialog handler.
+    const resetPage=await context.newPage();
+    resetPage.setDefaultTimeout(6000);
+
+    resetPage.on('pageerror',err=>
+      result.errors.push('Reset test browser error: '+err.message)
+    );
+
+    try{
+      await go(resetPage,'settings',editBase);
+
+      const requests=[];
+
+      resetPage.on('request',req=>{
+        if(req.method()==='POST'&&req.url()===resetUrl){
+          requests.push(req.url());
+        }
+      });
+
+      let cancellationPrompt=false;
+
+      resetPage.once('dialog',async dialog=>{
+        cancellationPrompt=
+          dialog.type()==='confirm'&&
+          dialog.message().includes('Reset all stored local demo data?');
+        await dialog.dismiss();
+      });
+
+      await resetPage.locator(
+        '[data-action="resetDemo"]'
+      ).click();
+
+      must(cancellationPrompt,
+        'Reset did not present the expected confirmation');
+
+      must(requests.length===0,
+        'Cancel triggered a reset request');
+
+      const unchangedResponse=await context.request.get(
+        editBase+'/api/bootstrap'
+      );
+
+      must(unchangedResponse.status()===200,
+        'Backend unavailable after cancellation');
+
+      const unchanged=await unchangedResponse.json();
+
+      must(unchanged.drafts.some(x=>x.id===canaryDraft.id),
+        'Cancelled reset deleted the draft');
+
+      must(unchanged.alerts.some(x=>x.id===canaryIncident.id),
+        'Cancelled reset deleted the incident');
+
+      let acceptancePrompt=false;
+
+      resetPage.once('dialog',async dialog=>{
+        acceptancePrompt=
+          dialog.type()==='confirm'&&
+          dialog.message().includes('Reset all stored local demo data?');
+        await dialog.accept();
+      });
+
+      const [response]=await Promise.all([
+        resetPage.waitForResponse(r=>
+          r.request().method()==='POST'&&r.url()===resetUrl,
+          {timeout:12000}
+        ),
+        resetPage.locator('[data-action="resetDemo"]').click()
+      ]);
+
+      must(acceptancePrompt,
+        'Expected reset confirmation was not accepted');
+
+      must(response.status()===200,
+        'Confirmed reset failed');
+
+      must(requests.length===1,
+        'Expected exactly one reset request');
+
+      await resetPage.locator('#toasts .toast')
+        .filter({hasText:'Local server data reset'})
+        .waitFor({state:'visible',timeout:10000});
+
+      const afterResponse=await context.request.get(
+        editBase+'/api/bootstrap'
+      );
+
+      must(afterResponse.status()===200,
+        'Backend unavailable after reset');
+
+      const after=await afterResponse.json();
+
+      must(!after.drafts.some(x=>x.id===canaryDraft.id),
+        'Draft survived confirmed reset');
+
+      must(!after.alerts.some(x=>x.id===canaryIncident.id),
+        'Incident survived confirmed reset');
+
+      const original=JSON.parse(
+        fs.readFileSync(
+          path.resolve(__dirname,'../../docs/seed.json'),
+          'utf8'
+        )
+      );
+
+      must(after.drafts.length===original.drafts.length,
+        'Draft count not restored to original seed');
+
+      must(after.alerts.length===original.alerts.length,
+        'Incident count not restored to original seed');
+
+      must(after.drafts.every(x=>
+        original.drafts.some(y=>y.id===x.id)
+      ),'Original draft identities not restored');
+
+      must(after.alerts.every(x=>
+        original.alerts.some(y=>y.id===x.id)
+      ),'Original incident identities not restored');
+
+      const auditResponse=await context.request.get(
+        editBase+'/api/audit'
+      );
+
+      must(auditResponse.status()===200,
+        'Audit unavailable after reset');
+
+      const audit=await auditResponse.json();
+
+      must(audit.chainValid===true,
+        'Reset audit chain invalid');
+
+      must(audit.events.some(e=>e.action==='DEMO_RESET'),
+        'Reset audit event missing');
+
+      await go(resetPage,'settings',editBase);
+
+      const reloaded=await (
+        await context.request.get(editBase+'/api/bootstrap')
+      ).json();
+
+      must(!reloaded.drafts.some(x=>x.id===canaryDraft.id),
+        'Reset draft returned after reload');
+
+      must(!reloaded.alerts.some(x=>x.id===canaryIncident.id),
+        'Reset incident returned after reload');
+
+      const publicAfter=await (
+        await context.request.get(base+'/api/bootstrap')
+      ).json();
+
+      must(
+        JSON.stringify(publicBefore.drafts)===
+        JSON.stringify(publicAfter.drafts),
+        'Reset unexpectedly changed public drafts'
+      );
+
+      must(
+        JSON.stringify(publicBefore.alerts)===
+        JSON.stringify(publicAfter.alerts),
+        'Reset unexpectedly changed public incidents'
+      );
+    }finally{
+      await resetPage.close();
+    }
+  });
 }
 (async()=>{
  try {
@@ -522,6 +1461,178 @@ async function deepProductChecks(p){
      }
      await mobile.close();
    });
+    // Reconcile control inventory with independently verified browser evidence.
+    const previewTestName =
+      'Operations: all three workflow template previews show distinct server-defined steps';
+
+    const previewPassed = result.checks.some(
+      item => item.name === previewTestName && item.status === 'PASS'
+    );
+
+    if (previewPassed) {
+      const workflows = result.routeInventory.workflows;
+      workflows.coveredByDedicatedTests = [];
+
+      workflows.notExercised = workflows.notExercised.filter(entry => {
+        if (
+          entry.control?.key === 'data-action' &&
+          entry.control?.value === 'previewWorkflow'
+        ) {
+          workflows.coveredByDedicatedTests.push({
+            control: entry.control,
+            method: 'dedicated browser scenario',
+            evidence: previewTestName
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+    const saveDraftTest =
+      'Studio: Save draft persists through API and page reload';
+
+    if(result.checks.some(x=>x.name===saveDraftTest&&x.status==='PASS')){
+      const studio=result.routeInventory.studio;
+      studio.coveredByDedicatedTests=[];
+
+      studio.notExercised=studio.notExercised.filter(entry=>{
+        if(entry.control?.key==='data-action' &&
+           entry.control?.value==='saveDraft'){
+          studio.coveredByDedicatedTests.push({
+            control:entry.control,
+            method:'browser click + API persistence + reload',
+            evidence:saveDraftTest
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+
+    const workflowTestName =
+      'Operations: workflow simulation is isolated and does not publish';
+
+    if(result.checks.some(
+      x=>x.name===workflowTestName&&x.status==='PASS'
+    )){
+      const inventory=result.routeInventory.workflows;
+      inventory.coveredByDedicatedTests=
+        inventory.coveredByDedicatedTests||[];
+
+      inventory.notExercised=inventory.notExercised.filter(entry=>{
+        if(entry.control?.key==='data-action' &&
+           entry.control?.value==='testWorkflow'){
+          inventory.coveredByDedicatedTests.push({
+            control:entry.control,
+            method:'public denial + real UI simulation + API verification',
+            evidence:workflowTestName
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+
+    const approvalUiName =
+      'Governance: approval UI enforces gates and invalidates stale approval';
+    const changesUiName =
+      'Governance: request changes persists with audit evidence';
+
+    const approvalPassed=result.checks.some(
+      x=>x.name===approvalUiName&&x.status==='PASS'
+    );
+    const changesPassed=result.checks.some(
+      x=>x.name===changesUiName&&x.status==='PASS'
+    );
+
+    if(approvalPassed||changesPassed){
+      const inventory=result.routeInventory.reviews;
+      inventory.coveredByDedicatedTests=
+        inventory.coveredByDedicatedTests||[];
+
+      inventory.notExercised=inventory.notExercised.filter(entry=>{
+        if(entry.control?.key!=='data-action')return true;
+
+        const action=entry.control.value;
+        const evidence=
+          action==='approveReview'&&approvalPassed
+            ?approvalUiName
+            :action==='requestChanges'&&changesPassed
+              ?changesUiName
+              :null;
+
+        if(!evidence)return true;
+
+        inventory.coveredByDedicatedTests.push({
+          control:entry.control,
+          method:'browser decision + backend verification + reload',
+          evidence
+        });
+        return false;
+      });
+    }
+    const certificateTestName =
+      'Governance: certificate UI issues verifiable local evidence without publishing';
+
+    if(result.checks.some(
+      x=>x.name===certificateTestName&&x.status==='PASS'
+    )){
+      const releases=result.routeInventory.releases;
+
+      releases.coveredByDedicatedTests=
+        releases.coveredByDedicatedTests||[];
+
+      releases.notExercised=releases.notExercised.filter(entry=>{
+        if(entry.control?.key==='data-action'&&
+           entry.control?.value==='certificate'){
+          releases.coveredByDedicatedTests.push({
+            control:entry.control,
+            method:'real browser issuance + persistence + HMAC verification',
+            evidence:certificateTestName
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+    const finalActions=[
+      {
+        route:'incidents',
+        action:'resolveIncident',
+        test:'Operations: incident resolution persists with audit evidence',
+        method:'browser PATCH + persistence + audit + reload'
+      },
+      {
+        route:'settings',
+        action:'resetDemo',
+        test:'Safety: demo reset requires confirmation and restores disposable seed',
+        method:'cancel and accept confirmation + seed restore + audit'
+      }
+    ];
+
+    for(const item of finalActions){
+      if(!result.checks.some(
+        x=>x.name===item.test&&x.status==='PASS'
+      ))continue;
+
+      const inventory=result.routeInventory[item.route];
+
+      inventory.coveredByDedicatedTests=
+        inventory.coveredByDedicatedTests||[];
+
+      inventory.notExercised=inventory.notExercised.filter(entry=>{
+        if(entry.control?.key!=='data-action'||
+           entry.control?.value!==item.action)return true;
+
+        inventory.coveredByDedicatedTests.push({
+          control:entry.control,
+          method:item.method,
+          evidence:item.test
+        });
+
+        return false;
+      });
+    }
    const unimplemented=Object.values(result.routeInventory).flatMap(x=>x.unimplemented||[]);
    const skippedControls=Object.values(result.routeInventory).flatMap(x=>x.notExercised||[]);
    result.coverage={

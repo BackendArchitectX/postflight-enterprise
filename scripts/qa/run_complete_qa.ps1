@@ -31,7 +31,7 @@ $project = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 Set-Location $project
 $branch = (git branch --show-current).Trim()
 Assert-Exit "Cannot read current branch"
-if ($branch -notin @("main","feat/zernio-visitor-readonly","feat/operational-workflows","feat/governance-workflows","feat/auth-workspaces-rbac","feat/clerk-auth-migration","feat/workspace-scoped-workflows")) { throw "Use a PostFlight development branch; currently on $branch" }
+if ($branch -notin @("main","feat/zernio-visitor-readonly","feat/operational-workflows","feat/governance-workflows","feat/auth-workspaces-rbac","feat/clerk-auth-migration","feat/workspace-scoped-workflows","feat/audit-v3-infrastructure")) { throw "Use a PostFlight development branch; currently on $branch" }
 if (-not (Test-Path "scripts\qa\full_browser_audit.cjs")) { throw "Missing QA script. Pull the latest feature branch first." }
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
