@@ -118,7 +118,7 @@ public final class LocalServer implements AutoCloseable{
        ?ClerkSessionVerifier.frontendOrigin(System.getenv("POSTFLIGHT_CLERK_PUBLISHABLE_KEY")):"";
    String clerkCsp=frontend.isEmpty()?"":(
        " "+frontend+" https://challenges.cloudflare.com https://*.protect.clerk.com");
-   String scripts="script-src 'self'"+clerkCsp+"; ";
+   String scripts="script-src 'self'"+(frontend.isEmpty()?"":" 'unsafe-inline'")+clerkCsp+"; ";
    String connections="connect-src 'self'"+(frontend.isEmpty()?"":(
        " "+frontend+" https://*.protect.clerk.com:*"))+"; ";
    String images="img-src 'self' data:"+(frontend.isEmpty()?"":" https://img.clerk.com")+"; ";
