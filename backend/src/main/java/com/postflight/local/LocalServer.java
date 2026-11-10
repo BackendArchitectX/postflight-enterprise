@@ -114,7 +114,7 @@ public final class LocalServer implements AutoCloseable{
    Path file=(path.equals("/")?web.resolve("index.html"):web.resolve(path.substring(1))).normalize();
    if(!file.startsWith(web)||!Files.isRegularFile(file)){send(ex,404,"Not found");return;}
    h.set("Content-Type",path.endsWith(".js")?"text/javascript; charset=utf-8":path.endsWith(".css")?"text/css; charset=utf-8":path.endsWith(".png")?"image/png":path.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8");
-   String frontend=ClerkSessionVerifier.configured()&&!publicDemo
+   String frontend=ClerkSessionVerifier.configured()&&!"true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"))
        ?ClerkSessionVerifier.frontendOrigin(System.getenv("POSTFLIGHT_CLERK_PUBLISHABLE_KEY")):"";
    String clerkCsp=frontend.isEmpty()?"":(
        " "+frontend+" https://challenges.cloudflare.com https://*.protect.clerk.com");
