@@ -175,7 +175,7 @@
         const ws=row(form,'Workspace',{name:'workspace',options:workspaces.map(w=>({label:w.name,value:w.id}))});
         if(selectedWorkspace)ws.value=selectedWorkspace;
         const sub=row(form,'Target Clerk user ID',{name:'sub',required:true,maxLength:100,
-          placeholder:'user_... from the other person's signed-in PostFlight account'});
+          placeholder:'user_... from another signed-in PostFlight account'});
         const role=row(form,'Role',{name:'role',options:['VIEWER','REVIEWER','ADMIN'].map(v=>({value:v,label:v}))});
         info(card,'Invitations are bound to an existing Clerk user ID, expire after 24 hours, and can be used once. No invitation email is sent.');
         form.addEventListener('submit',e=>{e.preventDefault();void save(form,async()=>{
