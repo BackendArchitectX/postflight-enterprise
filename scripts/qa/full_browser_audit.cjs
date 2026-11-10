@@ -69,7 +69,11 @@ async function listControls(p) {
 }
 async function primaryRouteSweep(p,route) {
   await go(p,route);
-  const initial=await listControls(p);
+  let initial=await listControls(p);
+  for(let attempt=0;initial.length<2&&attempt<8;attempt++){
+    await p.waitForTimeout(150);
+    initial=await listControls(p);
+  }
   must(initial.length>=2,'Interactive controls did not render on '+route);
   result.routeInventory[route]={firstView:initial,clicked:[],navigationControls:[],nested:[],unimplemented:[],notExercised:[]};
   const checked=new Set();
@@ -115,6 +119,10 @@ async function primaryRouteSweep(p,route) {
           result.routeInventory[route].nested.push(item);
           if(!item.attrs[0] || !item.attrs[0][1])continue;
           const [childKey,childValue]=item.attrs[0];
+          if(childKey==='data-action' && childValue==='previewWorkflow'){
+            result.routeInventory[route].notExercised.push({control:item,reason:'Template preview covered by dedicated browser test'});
+            continue;
+          }
           if(childKey==='data-action' && dangerous.has(childValue)){
             result.routeInventory[route].notExercised.push({control:item,reason:'Nested mutation; covered by isolated backend tests'});
             continue;
@@ -185,6 +193,87 @@ async function startBrowser() {
   throw new Error('No Chromium-based browser available. Install Chrome, Edge or Playwright Chromium. '+failures.join(' | '));
 }
 async function deepProductChecks(p){
+  await check('Operations: all three workflow template previews show distinct server-defined steps',async()=>{
+    const stageLengths=[];
+    for(let i=0;i<3;i++){
+      await go(p,'workflows');
+      await p.locator('[data-workflow-tab="templates"]').click();
+      await p.locator('[data-action="previewWorkflow"]').nth(i).click();
+      const modal=p.locator('.ops-dialog');
+      await modal.waitFor({state:'visible'});
+      await modal.locator('.ops-stage').first().waitFor({state:'visible',timeout:7000});
+      const steps=await modal.locator('.ops-stage').count();
+      must(steps>=3,'Template '+i+' does not have actual stages');
+      const title=await modal.locator('h2').innerText();
+      must(title.includes('v1.0'),'Template '+i+' missing version');
+      stageLengths.push(steps);
+      await modal.getByRole('button',{name:'Close preview'}).click();
+    }
+    must(new Set(stageLengths).size>1,'All templates appear identical');
+  });
+  await check('Operations: public incident create and escalation cannot save changes',async()=>{
+    await go(p,'incidents');
+    await p.locator('[data-action="newIncident"]').click();
+    const modal=p.locator('.ops-dialog');
+    await modal.waitFor({state:'visible'});
+    must(await modal.locator('button[type=submit]').isDisabled(),'Public create incident was enabled');
+    must((await modal.innerText()).includes('Public demo is read-only'),'Missing public-mode disclosure');
+    await modal.getByRole('button',{name:'Close'}).click();
+    await p.locator('[data-action="escalateIncident"]').click();
+    await modal.waitFor({state:'visible'});
+    must(await modal.locator('button[type=submit]').isDisabled(),'Public escalation enabled');
+  });
+  await check('Operations: editable UI creates then escalates an actual incident',async()=>{
+    await go(p,'incidents',editBase);
+    await p.locator('[data-action="newIncident"]').click();
+    const modal=p.locator('.ops-dialog');
+    await modal.waitFor({state:'visible'});
+    await modal.locator('#ops-title').fill('Browser QA escalation walkthrough');
+    await modal.locator('#ops-description').fill('Disposable operational test data');
+    await modal.locator('#ops-owner').fill('QA Incident Lead');
+    await modal.locator('button[type=submit]').click();
+    await modal.getByText(/created and audited/).waitFor();
+    const text=await modal.locator('.ops-status').innerText();
+    const match=text.match(/PF-INC-\d+/);
+    must(!!match,'New incident identifier missing');
+    const id=match[0];
+    await modal.getByRole('button',{name:'View updated incidents'}).click();
+    await awaitReady(p);
+    const record=p.locator('tr[data-incident="'+id+'"]');
+    await record.waitFor({state:'visible'});
+    await record.click();
+    await p.locator('[data-action="escalateIncident"]').click();
+    await modal.waitFor({state:'visible'});
+    await modal.locator('#ops-reason').fill('Need legal review for a high-risk claim');
+    await modal.locator('#ops-assignedTo').fill('Legal QA');
+    await modal.locator('button[type=submit]').click();
+    await modal.getByText(/escalated to level 1/).waitFor();
+    const response=await context.request.get(editBase+'/api/incidents');
+    must(response.status()===200,'Incident persistence endpoint unavailable');
+    const incidents=await response.json();
+    const updated=incidents.find(x=>x.id===id);
+    must(updated?.owner==='Legal QA'&&updated.escalationLevel===1&&updated.status==='Investigating',
+      'Incident escalation not persisted in Java state');
+  });
+
+  await check('Operations: user-entered HTML is rendered as safe text',async()=>{
+    const title='<img src=x onerror=alert(1)> QA harmless string';
+    const owner='<svg onload=alert(1)> QA test owner';
+    const created=await context.request.post(editBase+'/api/incidents',{
+      data:{title,owner,severity:'Medium',description:'Untrusted text must be escaped'},
+      failOnStatusCode:false
+    });
+    must(created.status()===201,'Unable to create XSS test incident');
+    const record=await created.json();
+    await go(p,'incidents',editBase);
+    const row=p.locator('tr[data-incident="'+record.id+'"]');
+    await row.waitFor({state:'visible'});
+    must((await row.innerText()).includes('<img src=x'),'Title was not displayed as text');
+    must(await row.locator('img').count()===0,'HTML image tag was injected into incident table');
+    await row.click();
+    must(await p.locator('main [onload], main [onerror]').count()===0,'Active HTML attribute injected');
+    must((await p.locator('main').innerText()).includes('<svg onload=alert(1)>'),'Owner not escaped as visible text');
+  });
   await check('Preflight: high-risk content blocked',async()=>{
     await go(p,'playground');
     await p.locator('[data-pf-sample="0"]').click();

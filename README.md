@@ -1,5 +1,18 @@
 # PostFlight Enterprise — Local Working Application
 
+
+## Operational Workflows — feature branch
+
+**Phase 1: incident management and workflow template previews**
+
+- **Create incident:** local-only incident record with validated title, severity, owner and description. The Java 17 API persists it in the existing file-backed state and appends a tamper-evident audit-chain event.
+- **Escalate incident:** supply a required reason and new owner. The incident moves to `Investigating`, increments its escalation level, preserves an escalation history and creates an audit event. Resolved incidents and escalation levels above 5 are rejected.
+- **Preview three distinct workflow templates:** `GET /api/workflows/templates` returns read-only versioned stages for Regulated marketing, Standard campaign and Emergency correction. Each preview shows the actual stage order, owning role and target SLA. Previewing never starts, publishes or changes a workflow.
+- **Public security:** incident mutation endpoints remain blocked by `POSTFLIGHT_PUBLIC_DEMO=true` with HTTP 403. Read-only template previews work in public mode. No real user identities, email invitations or external social publishing are introduced.
+- **Testing:** `scripts/test_operational_workflows.py` covers invalid requests, persistent incident lifecycle, escalation audit, resolved-incident rejection and template differentiation. The full browser suite also exercises these controls using a disposable writable Java backend and a read-only public Docker instance.
+
+This is a local demonstration, **not a production multi-user incident management system**. It does not have sign-in, authorization, role-specific access, secure tenant separation, external notification delivery or durable cloud storage. Do not expose the writable Java server to the public internet.
+
 ## New: Content Preflight Lab and Zernio Live Delivery Monitor (feature branch)
 
 A working, privacy-conscious demonstration now includes **two real pages** in the PostFlight navigation:

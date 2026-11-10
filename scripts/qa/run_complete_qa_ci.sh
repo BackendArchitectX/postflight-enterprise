@@ -38,6 +38,7 @@ done
 python3 scripts/test_integration.py http://127.0.0.1:10004
 python3 scripts/test_extensions.py http://127.0.0.1:10004
 python3 scripts/test_security.py http://127.0.0.1:10004
+python3 scripts/test_operational_workflows.py http://127.0.0.1:10004
 node scripts/test_frontend_state.cjs http://127.0.0.1:10004
 
 deps="$temp_root/npm"

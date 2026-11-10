@@ -1,0 +1,26 @@
+/* Isolated operational-workflow dialogs. Scoped to avoid changing existing SPA. */
+.ops-backdrop{position:fixed;inset:0;z-index:2000;background:rgba(11,24,45,.62);display:flex;align-items:center;justify-content:center;padding:18px}
+.ops-dialog{width:min(610px,100%);max-height:min(92vh,900px);overflow-y:auto;background:#fff;color:#23364f;border-radius:16px;box-shadow:0 24px 72px rgba(0,0,0,.3);padding:24px}
+.ops-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:15px}
+.ops-head h2{font-size:20px;font-weight:750;margin:0 0 5px}
+.ops-head p{font-size:12px;color:#687993;line-height:1.65;margin:0}
+.ops-close{font-size:26px;line-height:1;background:transparent;border:none;color:#657790;cursor:pointer;padding:0 5px}
+.ops-form{display:grid;gap:13px}
+.ops-field label{display:block;font-size:12px;font-weight:700;margin:0 0 7px;color:#435772}
+.ops-field input,.ops-field textarea,.ops-field select{display:block;width:100%;padding:10px 11px;border-radius:9px;border:1px solid #d5deeb;background:#fbfcff;color:#20324b;font:inherit;font-size:13px}
+.ops-field textarea{resize:vertical;min-height:88px;line-height:1.6}
+.ops-field input:focus,.ops-field textarea:focus,.ops-field select:focus{outline:2px solid #b9c5f8}
+.ops-buttons{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:10px}
+.ops-primary,.ops-secondary{border-radius:9px;padding:10px 14px;cursor:pointer;font-size:12px;font-weight:750}
+.ops-primary{border:1px solid #4957bd;background:#4856bd;color:#fff}
+.ops-secondary{border:1px solid #d7deec;background:white;color:#394b65}
+.ops-primary:disabled{opacity:.55;cursor:not-allowed}
+.ops-notice{border:1px solid #d1daeb;background:#f3f6fc;color:#385172;padding:12px 13px;border-radius:9px;font-size:12px;line-height:1.6;margin:9px 0 16px}
+.ops-notice.error,.ops-error{background:#fff0f2;border-color:#f6c9d2;color:#a63d52}
+.ops-status{font-size:12px;line-height:1.6}
+.ops-success{padding:10px 12px;border-radius:9px;background:#e8f6f0;color:#146c55}
+.ops-stages{margin:12px 0;padding:0;list-style:none;display:grid;gap:10px}
+.ops-stage{border:1px solid #e1e7f0;border-radius:10px;padding:14px 15px;background:#fbfcff}
+.ops-stage strong{font-size:13px;color:#233c60}
+.ops-stage p{font-size:11px;color:#697b95;margin:6px 0 0}
+@media(max-width:600px){.ops-dialog{padding:17px}.ops-backdrop{padding:8px}.ops-buttons button{flex:1}}
