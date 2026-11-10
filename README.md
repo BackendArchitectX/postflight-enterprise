@@ -6,7 +6,10 @@ PostFlight is like a checklist for social media content. You can write a post, f
 
 > **This is a learning and local testing app, not a real publishing service.** It does not post to social media or give official legal approval.
 
-**[Try the read-only demo](https://postflight-enterprise.onrender.com/)** · **[Follow every workflow step by step](docs/WORKFLOW_GUIDE.md)**
+**Live demo on Render:** https://postflight-enterprise.onrender.com/  
+**[Step-by-step guide for every workflow](docs/WORKFLOW_GUIDE.md)**
+
+The Render site is **read-only**: visitors can explore the app and try the safe preflight preview, but cannot save drafts, publish posts or change accounts.
 
 ## 1. Run it on your computer
 
