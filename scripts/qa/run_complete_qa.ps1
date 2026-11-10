@@ -67,6 +67,10 @@ try {
     Assert-Exit "Python 3 failed"
     & $node.Source --version
     Assert-Exit "Node failed"
+    & $python.Source @pythonArgs "scripts/qa/check_scheduler_security.py"
+    Assert-Exit "CI scheduler and guardian safety checks failed"
+    $summary += "PASS scheduler safeguards, fixed retries and pinned actions"
+
     & $docker.Source version --format "{{.Server.Version}}"
     Assert-Exit "Docker engine failed"
 
