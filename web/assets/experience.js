@@ -131,19 +131,28 @@ async function runLive(){
  }catch(err){live.error=err.message||'Unable to retrieve Zernio activity.';live.data=null;}
  finally{live.loading=false;rerender();}
 }
+function invalidateOnEdit() {
+ const report=document.getElementById('pf-report');
+ if(report)report.innerHTML='<div class="px-placeholder"><h3>Draft changed — results are out of date</h3><p>Run the Java preflight again to analyze this exact content version.</p></div>';
+ const kpi=document.querySelectorAll('.px-kpis > div > strong');
+ if(kpi.length===4){kpi[1].textContent='—';kpi[2].textContent='—';kpi[3].textContent='NOT EVALUATED';}
+ const fingerprint=document.querySelector('.px-integrity code');
+ if(fingerprint)fingerprint.textContent='Recheck the draft to generate a new fingerprint';
+ for(const button of document.querySelectorAll('[data-pf-action]'))button.disabled=true;
+}
 document.addEventListener('input',e=>{
   const v=e.target;
   if(v.id==='pf-content'){
-    pf.content=v.value;pf.report=null;pf.simulation=null;
+    pf.content=v.value;pf.report=null;pf.simulation=null;invalidateOnEdit();
     const counter=document.getElementById('pf-counter');
     if(counter)counter.textContent=Array.from(v.value).length+' / 4,000 characters';
   }
-  if(v.id==='pf-alt'){pf.altText=v.value;pf.report=null;pf.simulation=null;}
+  if(v.id==='pf-alt'){pf.altText=v.value;pf.report=null;pf.simulation=null;invalidateOnEdit();}
 });
 document.addEventListener('change',e=>{
   const v=e.target;
-  if(v.id==='pf-platform'){pf.platform=v.value;pf.report=null;pf.simulation=null;}
-  if(v.id==='pf-media'){pf.hasMedia=v.checked;pf.report=null;pf.simulation=null;}
+  if(v.id==='pf-platform'){pf.platform=v.value;pf.report=null;pf.simulation=null;rerender();}
+  if(v.id==='pf-media'){pf.hasMedia=v.checked;pf.report=null;pf.simulation=null;rerender();}
   if(v.id==='pf-live-consent')live.consent=v.checked;
   if(v.id==='pf-live-auto')live.auto=v.checked;
 });
