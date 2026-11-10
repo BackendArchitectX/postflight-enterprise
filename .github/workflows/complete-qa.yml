@@ -1,0 +1,42 @@
+name: PostFlight Complete QA
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/zernio-visitor-readonly]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-browser-and-api-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare headless Chromium
+        run: npx --yes playwright install chromium
+      - name: Run all isolated Java and browser checks
+        run: bash scripts/qa/run_complete_qa_ci.sh
+      - name: Save complete QA screenshots and result inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postflight-complete-qa
+          path: qa-reports/ci-complete/
+          if-no-files-found: warn
+          retention-days: 7
