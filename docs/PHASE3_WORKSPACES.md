@@ -22,9 +22,14 @@ POSTFLIGHT_COGNITO_USER_POOL_ID=ap-south-1_EXAMPLE
 POSTFLIGHT_COGNITO_CLIENT_ID=examplepublicclientid123
 POSTFLIGHT_COGNITO_DOMAIN=your-domain.auth.ap-south-1.amazoncognito.com
 POSTFLIGHT_PUBLIC_DEMO=false
+# Required only when serving the private app behind an HTTPS reverse proxy:
+POSTFLIGHT_PRIVATE_PROXY=true
+POSTFLIGHT_APP_ORIGIN=https://your-private-test-domain.example
 ```
 
 Do **not** add a client secret to this browser app. Use a **private instance**, never the shared read-only Render deployment. No credentials or user-pool resources are provisioned by this repository.
+
+For local development at `http://localhost:<port>/`, leave `POSTFLIGHT_PRIVATE_PROXY` unset: the Java server stays bound to loopback and the existing localhost same-origin guard applies. To serve a **private HTTPS test environment**, set `POSTFLIGHT_PRIVATE_PROXY=true` and the exact externally served HTTPS origin in `POSTFLIGHT_APP_ORIGIN` (hostname only; no path or port). The server refuses to expose a private proxy listener without valid Cognito configuration and an explicit HTTPS origin. Route TLS through a trusted HTTPS reverse proxy; limit access to the private test environment. Do not turn this on for the public Render demo.
 
 Visit the Workspaces page. The **New workspace**, **Invite member**, **Secure workspaces**, and **Join invitation** controls start the authenticated flow. Cognito must have at least two real user accounts for an invite/accept test, and the inviter needs the intended member's exact Cognito `sub`. The current code does not look up a user's email, check that the target `sub` exists before invitation, or send invitation emails.
 
