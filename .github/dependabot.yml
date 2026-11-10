@@ -1,0 +1,11 @@
+# GitHub Actions are SHA-pinned. Dependabot raises reviewed updates weekly.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:30"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
