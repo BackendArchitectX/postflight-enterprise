@@ -19,6 +19,11 @@ public final class WorkspaceSecurityCheck {
         try{work.run();throw new AssertionError("Expected "+status+" but operation succeeded");}
         catch(WorkspaceRegistry.Failure e){ok(e.status==status,"Expected "+status+" but got "+e.status+": "+e.getMessage());}
     }
+    private static void invalidProxy(boolean cognito,String origin){
+        try { LocalServer.verifiedProxyOrigin(true,cognito,origin); }
+        catch(IllegalArgumentException expected){ok(true,"Bad private proxy origin rejected");return;}
+        throw new AssertionError("Unsafe private proxy config accepted: "+origin);
+    }
     private static void rejectJwt(Runnable work){
         try{work.run();throw new AssertionError("Invalid JWT was accepted");}
         catch(CognitoAccessVerifier.AuthFailure e){ok(e.status==401,"Expected unauthorized JWT");}
@@ -41,6 +46,17 @@ public final class WorkspaceSecurityCheck {
             viewer=new WorkspaceRegistry.Principal(bob,"bob"),
             admin=new WorkspaceRegistry.Principal(carol,"carol"),
             outsider=new WorkspaceRegistry.Principal(eve,"eve");
+        // HTTPS origin trust is configured by the operator, never inferred from Host headers.
+        ok(LocalServer.verifiedProxyOrigin(false,false,null).isEmpty(),"Default local bind should be unchanged");
+        ok("https://private.example.com".equals(LocalServer.verifiedProxyOrigin(
+            true,true,"https://private.example.com")),"Trusted HTTPS origin not accepted");
+        invalidProxy(false,"https://private.example.com");
+        invalidProxy(true,"http://private.example.com");
+        invalidProxy(true,"https://private.example.com:8080");
+        invalidProxy(true,"https://private.example.com/unsafe/path");
+        invalidProxy(true,"https://user@private.example.com");
+        invalidProxy(true,"https://private.example.com/?role=admin");
+        invalidProxy(true,null);
         try{
             Path file=folder.resolve("secure.json");
             WorkspaceRegistry store=new WorkspaceRegistry(file);
