@@ -15,14 +15,38 @@ public final class LocalServer implements AutoCloseable{
  private final ApiDispatcher api;
  private final WorkspaceGateway workspaceGateway;
  private final Path web;
+ private final String privateProxyOrigin;
  public LocalServer(int port,Path root)throws Exception{
   Path data=root.resolve("data"),seed=root.resolve("docs/seed.json");web=root.resolve("web").toAbsolutePath().normalize();
   PostFlightService service=new PostFlightService(data,seed);api=new ApiDispatcher(service);
   workspaceGateway=new WorkspaceGateway(root);
-  String bindHost = "true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"))
-      ? "0.0.0.0" : "127.0.0.1";
+  boolean publicDemo="true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"));
+  boolean privateProxy="true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PRIVATE_PROXY"));
+  privateProxyOrigin=verifiedProxyOrigin(privateProxy&&!publicDemo,
+      CognitoAccessVerifier.configured(),System.getenv("POSTFLIGHT_APP_ORIGIN"));
+  String bindHost = publicDemo || privateProxy ? "0.0.0.0" : "127.0.0.1";
   server=HttpServer.create(new InetSocketAddress(bindHost,port),0);
   server.createContext("/",this::handle);server.setExecutor(Executors.newFixedThreadPool(8));
+ }
+ /**
+  * Explicit TLS reverse-proxy origin. The secure runtime NEVER binds to an
+  * external interface unless both Cognito and the expected HTTPS origin exist.
+  * Supplying a Host or X-Forwarded-Proto request header cannot enable this.
+  */
+ static String verifiedProxyOrigin(boolean privateProxy,boolean cognitoConfigured,String raw) {
+  if(!privateProxy)return "";
+  if(!cognitoConfigured)throw new IllegalArgumentException("Private proxy requires configured Cognito");
+  try {
+   URI uri=URI.create(Objects.requireNonNull(raw,"POSTFLIGHT_APP_ORIGIN required"));
+   if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getHost().isBlank()
+      ||uri.getUserInfo()!=null||uri.getRawQuery()!=null||uri.getRawFragment()!=null
+      ||!(uri.getRawPath()==null||uri.getRawPath().isEmpty()||uri.getRawPath().equals("/"))
+      ||uri.getPort()!=-1)
+     throw new IllegalArgumentException("Private proxy origin must be an HTTPS hostname without a port or path");
+   return "https://"+uri.getHost().toLowerCase(Locale.ROOT);
+  } catch(RuntimeException e) {
+   throw new IllegalArgumentException("Invalid POSTFLIGHT_APP_ORIGIN for private TLS proxy",e);
+  }
  }
  public void start(){server.start();}
  public int port(){return server.getAddress().getPort();}
@@ -38,7 +62,8 @@ public final class LocalServer implements AutoCloseable{
     String origin=ex.getRequestHeaders().getFirst("Origin");
     boolean statelessPreview=path.equals("/api/demo/preflight")&&"POST".equals(method);
     if(mutation&&origin!=null){
-      boolean validOrigin=origin.equals("http://127.0.0.1:"+port())||origin.equals("http://localhost:"+port());
+      boolean validOrigin=origin.equals("http://127.0.0.1:"+port())||origin.equals("http://localhost:"+port())
+          ||(!privateProxyOrigin.isEmpty()&&origin.equals(privateProxyOrigin));
       if(statelessPreview){
         try{
           URI source=URI.create(origin);
