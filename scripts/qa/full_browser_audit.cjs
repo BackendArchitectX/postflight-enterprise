@@ -38,6 +38,9 @@ function skip(name,reason) { result.skipped.push({name,reason}); }
 async function awaitReady(p){
   await p.locator('#app .app').waitFor({state:'visible',timeout:15000});
   await p.locator('main').waitFor({state:'visible',timeout:10000});
+  await p.locator('header button[data-action="search"]').waitFor({state:'visible',timeout:10000});
+  await p.locator('aside button.nav-item').first().waitFor({state:'visible',timeout:10000});
+  await p.locator('main h1').first().waitFor({state:'visible',timeout:10000});
 }
 let navigationId = 0;
 async function go(p,route,host=base) {
@@ -67,7 +70,8 @@ async function listControls(p) {
 async function primaryRouteSweep(p,route) {
   await go(p,route);
   const initial=await listControls(p);
-  result.routeInventory[route]={firstView:initial,clicked:[],nested:[],unimplemented:[],notExercised:[]};
+  must(initial.length>=2,'Interactive controls did not render on '+route);
+  result.routeInventory[route]={firstView:initial,clicked:[],navigationControls:[],nested:[],unimplemented:[],notExercised:[]};
   const checked=new Set();
   const ordered = initial.filter(x=>x.attrs.length>0 && !x.disabled);
   const capped=ordered.slice(0,90);
@@ -85,7 +89,7 @@ async function primaryRouteSweep(p,route) {
     }
     if(key==='data-route') {
       // All navigation routes are independently verified.
-      result.routeInventory[route].clicked.push({control,method:'dedicated route test'});
+      result.routeInventory[route].navigationControls.push(control);
       continue;
     }
     await go(p,route);
@@ -289,6 +293,13 @@ async function deepProductChecks(p){
    });
    for(const route of routes){
      await check('Desktop: '+route+' page, buttons, primary nested controls',async()=>primaryRouteSweep(page,route));
+     await check('Sidebar route click: '+route,async()=>{
+       await go(page,'overview');
+       const menu=page.locator('aside button.nav-item[data-route="'+route+'"]');
+       await menu.click({timeout:4500});
+       must(page.url().includes('#/'+route),'Sidebar click did not navigate to '+route);
+       await page.locator('main h1').first().waitFor({state:'visible'});
+     });
    }
    await deepProductChecks(page);
    await check('Mobile: all 14 pages render without overflow',async()=>{
@@ -308,6 +319,7 @@ async function deepProductChecks(p){
      routesInspected:Object.keys(result.routeInventory).length,
      controlsInventory:Object.values(result.routeInventory).reduce((n,x)=>n+(x.firstView||[]).length,0),
      controlsClicked:Object.values(result.routeInventory).reduce((n,x)=>n+(x.clicked||[]).length,0),
+     sidebarRoutesClicked:routes.length,
      nestedControlsDiscovered:Object.values(result.routeInventory).reduce((n,x)=>n+(x.nested||[]).length,0),
      unimplementedControls:unimplemented.length,
      unexercisedControls:skippedControls.length,
