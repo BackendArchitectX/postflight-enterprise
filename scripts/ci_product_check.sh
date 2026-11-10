@@ -18,7 +18,7 @@ for i in $(seq 1 30); do
 done
 curl -fsS -X POST http://127.0.0.1:18080/api/demo/preflight \
  -H 'Content-Type: application/json' \
- -d '{"platform":"linkedin","content":"Guaranteed returns on your investment!","hasMedia":false,"altText":""}' > build/ci-risk.json
+ -d '{"platform":"linkedin","content":"Invest now! Guaranteed 20% returns and instant profits. Contact advice@demo.example today.","hasMedia":false,"altText":""}' > build/ci-risk.json
 curl -fsS -X POST http://127.0.0.1:18080/api/demo/preflight \
  -H 'Content-Type: application/json' \
  -d '{"platform":"linkedin","content":"Financial planning matters. Investments involve risk and past performance is not a guarantee of future results.","hasMedia":false,"altText":""}' > build/ci-safer.json
