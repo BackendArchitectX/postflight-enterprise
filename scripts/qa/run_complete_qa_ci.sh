@@ -5,9 +5,12 @@ cd "$(dirname "$0")/../.."
 mkdir -p build/qa-classes qa-reports/ci-complete
 find backend/src/main/java/com/postflight/core backend/src/main/java/com/postflight/local -name '*.java' | sort > build/qa-sources.txt
 javac --release 17 -encoding UTF-8 -d build/qa-classes @build/qa-sources.txt
+javac --release 17 -encoding UTF-8 -cp build/qa-classes -d build/qa-classes scripts/qa/WorkspaceSecurityCheck.java
+java -cp build/qa-classes com.postflight.local.WorkspaceSecurityCheck
 node --check web/assets/app.js
 node --check web/assets/experience.js
 node --check web/assets/zernio-visitor.js
+node --check web/assets/secure-workspaces.js
 node --check scripts/qa/full_browser_audit.cjs
 
 temp_root="$(mktemp -d)"
@@ -40,6 +43,7 @@ python3 scripts/test_extensions.py http://127.0.0.1:10004
 python3 scripts/test_security.py http://127.0.0.1:10004
 python3 scripts/test_operational_workflows.py http://127.0.0.1:10004
 python3 scripts/test_governance_workflows.py http://127.0.0.1:10004
+python3 scripts/test_auth_workspaces.py http://127.0.0.1:10003 http://127.0.0.1:10004
 node scripts/test_frontend_state.cjs http://127.0.0.1:10004
 
 deps="$temp_root/npm"
