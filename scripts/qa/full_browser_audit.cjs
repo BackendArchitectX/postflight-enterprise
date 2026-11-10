@@ -69,7 +69,11 @@ async function listControls(p) {
 }
 async function primaryRouteSweep(p,route) {
   await go(p,route);
-  const initial=await listControls(p);
+  let initial=await listControls(p);
+  for(let attempt=0;initial.length<2&&attempt<8;attempt++){
+    await p.waitForTimeout(150);
+    initial=await listControls(p);
+  }
   must(initial.length>=2,'Interactive controls did not render on '+route);
   result.routeInventory[route]={firstView:initial,clicked:[],navigationControls:[],nested:[],unimplemented:[],notExercised:[]};
   const checked=new Set();
@@ -115,6 +119,10 @@ async function primaryRouteSweep(p,route) {
           result.routeInventory[route].nested.push(item);
           if(!item.attrs[0] || !item.attrs[0][1])continue;
           const [childKey,childValue]=item.attrs[0];
+          if(childKey==='data-action' && childValue==='previewWorkflow'){
+            result.routeInventory[route].notExercised.push({control:item,reason:'Template preview covered by dedicated browser test'});
+            continue;
+          }
           if(childKey==='data-action' && dangerous.has(childValue)){
             result.routeInventory[route].notExercised.push({control:item,reason:'Nested mutation; covered by isolated backend tests'});
             continue;
@@ -193,6 +201,7 @@ async function deepProductChecks(p){
       await p.locator('[data-action="previewWorkflow"]').nth(i).click();
       const modal=p.locator('.ops-dialog');
       await modal.waitFor({state:'visible'});
+      await modal.locator('.ops-stage').first().waitFor({state:'visible',timeout:7000});
       const steps=await modal.locator('.ops-stage').count();
       must(steps>=3,'Template '+i+' does not have actual stages');
       const title=await modal.locator('h2').innerText();
