@@ -23,19 +23,19 @@ public final class LocalServer implements AutoCloseable{
   boolean publicDemo="true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"));
   boolean privateProxy="true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PRIVATE_PROXY"));
   privateProxyOrigin=verifiedProxyOrigin(privateProxy&&!publicDemo,
-      CognitoAccessVerifier.configured(),System.getenv("POSTFLIGHT_APP_ORIGIN"));
+      ClerkSessionVerifier.configured(),System.getenv("POSTFLIGHT_APP_ORIGIN"));
   String bindHost = publicDemo || privateProxy ? "0.0.0.0" : "127.0.0.1";
   server=HttpServer.create(new InetSocketAddress(bindHost,port),0);
   server.createContext("/",this::handle);server.setExecutor(Executors.newFixedThreadPool(8));
  }
  /**
   * Explicit TLS reverse-proxy origin. The secure runtime NEVER binds to an
-  * external interface unless both Cognito and the expected HTTPS origin exist.
+  * external interface unless both Clerk and the expected HTTPS origin exist.
   * Supplying a Host or X-Forwarded-Proto request header cannot enable this.
   */
- static String verifiedProxyOrigin(boolean privateProxy,boolean cognitoConfigured,String raw) {
+ static String verifiedProxyOrigin(boolean privateProxy,boolean clerkConfigured,String raw) {
   if(!privateProxy)return "";
-  if(!cognitoConfigured)throw new IllegalArgumentException("Private proxy requires configured Cognito");
+  if(!clerkConfigured)throw new IllegalArgumentException("Private proxy requires configured Clerk");
   try {
    URI uri=URI.create(Objects.requireNonNull(raw,"POSTFLIGHT_APP_ORIGIN required"));
    if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getHost().isBlank()
@@ -77,6 +77,12 @@ public final class LocalServer implements AutoCloseable{
     if(ex.getRequestHeaders().getFirst("Content-Length")!=null){try{if(Long.parseLong(ex.getRequestHeaders().getFirst("Content-Length"))>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}}catch(NumberFormatException e){send(ex,400,"{\"error\":\"Invalid Content-Length\"}");return;}}
     byte[] request=ex.getRequestBody().readNBytes(1024*1024+1);
     if(request.length>1024*1024){send(ex,413,"{\"error\":\"Request too large\"}");return;}
+    // Authenticated mode must not expose any unscoped integration routes.
+    if(ClerkSessionVerifier.authRequested()&&!path.startsWith("/api/secure/")
+        &&!path.equals("/api/health")&&!path.equals("/api/demo/preflight")){
+      send(ex,403,Json.stringify(Map.of("error","Legacy demo API disabled in authenticated mode; use /api/secure")));
+      return;
+    }
     // Fixed GET-only Zernio proxy using the visitor's API key for this request.
     // No credentials are saved, and there is no publishing or account-write operation.
     if(path.equals("/api/zernio/accounts")){
@@ -95,13 +101,8 @@ public final class LocalServer implements AutoCloseable{
       }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
       return;
     }
-    // When Cognito is enabled, never expose the old shared, unauthenticated
+    // When Clerk is enabled, never expose the old shared, unauthenticated
     // demo database as tenant data or allow legacy unscoped mutations.
-    if(CognitoAccessVerifier.configured()&&!path.startsWith("/api/secure/")
-        &&!path.equals("/api/health")&&!path.equals("/api/demo/preflight")){
-      send(ex,403,Json.stringify(Map.of("error","Legacy demo API disabled in authenticated mode; use /api/secure")));
-      return;
-    }
     ApiDispatcher.Answer result=path.startsWith("/api/secure/")
         ?workspaceGateway.handle(method,path,new String(request,StandardCharsets.UTF_8),ex.getRequestHeaders().getFirst("Authorization"))
         :api.handle(method,path,new String(request,StandardCharsets.UTF_8));
@@ -111,12 +112,16 @@ public final class LocalServer implements AutoCloseable{
    Path file=(path.equals("/")?web.resolve("index.html"):web.resolve(path.substring(1))).normalize();
    if(!file.startsWith(web)||!Files.isRegularFile(file)){send(ex,404,"Not found");return;}
    h.set("Content-Type",path.endsWith(".js")?"text/javascript; charset=utf-8":path.endsWith(".css")?"text/css; charset=utf-8":path.endsWith(".png")?"image/png":path.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8");
-   String cognitoDomain=System.getenv("POSTFLIGHT_COGNITO_DOMAIN");
-   if(cognitoDomain==null)cognitoDomain="";
-   cognitoDomain=cognitoDomain.trim().replaceFirst("^https://","");
-   String cognitoConnect=CognitoAccessVerifier.configured()&&cognitoDomain.matches("[A-Za-z0-9.-]{5,253}")&&!cognitoDomain.startsWith(".")&&!cognitoDomain.endsWith(".")
-       ?" https://"+cognitoDomain:"";
-   h.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"+cognitoConnect+"; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+   String clerkOrigin=ClerkSessionVerifier.configured()?System.getenv("POSTFLIGHT_CLERK_ISSUER"):"";
+   String remote=clerkOrigin.isEmpty()?"":" "+clerkOrigin;
+   String csp="default-src 'self'; "
+       +"script-src 'self'"+remote+" https://challenges.cloudflare.com https://*.protect.clerk.com; "
+       +"style-src 'self' 'unsafe-inline'; "
+       +"img-src 'self' data: https://img.clerk.com; "
+       +"connect-src 'self'"+remote+" https://*.protect.clerk.com:* https://clerk-telemetry.com https://*.clerk-telemetry.com; "
+       +"frame-src 'self' https://challenges.cloudflare.com https://*.protect.clerk.com; "
+       +"worker-src 'self' blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+   h.set("Content-Security-Policy",csp);
    if(path.equals("/")||path.endsWith(".html")||path.endsWith(".js")||path.endsWith(".css")) h.set("Cache-Control","no-cache, must-revalidate");
    byte[] bytes=Files.readAllBytes(file);ex.sendResponseHeaders(200,method.equals("HEAD")?-1:bytes.length);if(!method.equals("HEAD")){try(OutputStream out=ex.getResponseBody()){out.write(bytes);}}
   }catch(Exception e){try{send(ex,500,"Internal error");}catch(Exception ignored){}}finally{ex.close();}

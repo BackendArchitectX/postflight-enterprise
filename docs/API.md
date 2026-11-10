@@ -51,3 +51,7 @@ Invoke-RestMethod -Method POST -Uri http://127.0.0.1:8080/api/validations `
 ### Validation behavior
 
 This implementation provides representative local policy checks for absolute guarantees, investment-risk disclosures, simplified X character budgets, missing image alt-text, and Instagram caption link usability. It does **not** call live platform validation endpoints, and unsupported media/safe-area rules remain a design preview.
+
+## Authenticated Clerk workspace APIs (private Java SE runtime)
+
+When Clerk is configured, `/api/secure/config` stays public. `/api/secure/me`, `/api/secure/workspaces`, `/api/secure/workspaces/{id}/members`, `/api/secure/workspaces/{id}/invitations`, and `/api/secure/invitations/accept` require a verified `Authorization: Bearer <Clerk session JWT>` header. The separate legacy local demo endpoints are blocked in authenticated mode. Read [the setup guide](CLERK_AUTH.md).

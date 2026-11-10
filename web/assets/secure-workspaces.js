@@ -1,8 +1,7 @@
 (() => {
   'use strict';
-  // Cognito authorization-code + PKCE. Access token is held in RAM only:
-  // NEVER in localStorage, sessionStorage, URL or browser logs.
-  let accessToken=null,expiresAt=0,config=null,overlay=null,busy=false;
+  // Clerk owns the session and refreshes tokens. PostFlight never persists JWTs.
+  let config=null,overlay=null,busy=false,clerk=null,pendingKind=null;
   const managed=new Set(['newWorkspace','invite','secureWorkspaces','joinWorkspace']);
   const el=(tag,content,cls)=>{
     const n=document.createElement(tag);if(content!==undefined)n.textContent=content;
@@ -10,7 +9,8 @@
   };
   async function json(method,path,body){
     const headers={Accept:'application/json'};
-    if(accessToken)headers.Authorization='Bearer '+accessToken;
+    const token=await clerk?.session?.getToken();
+    if(token)headers.Authorization='Bearer '+token;
     if(body!==undefined)headers['Content-Type']='application/json';
     const res=await fetch(path,{method,headers,credentials:'omit',cache:'no-store',
       body:body===undefined?undefined:JSON.stringify(body)});
@@ -54,84 +54,50 @@
     }
     box.append(lab,node);parent.append(box);return node;
   }
-  function canOperate(){return accessToken&&Date.now()<expiresAt-30000;}
-  function random(bytes){
-    const a=new Uint8Array(bytes);crypto.getRandomValues(a);
-    return btoa(String.fromCharCode(...a)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
-  }
-  async function startLogin(kind){
-    if(!config?.enabled||!config?.hostedDomain||!config?.clientId){
-      info(overlay?.querySelector('.ops-dialog')||document.body,'Cognito sign-in is not configured. Set the user pool, app client and hosted domain on a private deployment.','error');return;
+  function canOperate(){return !!(clerk?.isSignedIn && clerk?.session);}
+  function startLogin(kind){
+    if(!config?.enabled||!clerk){
+      info(overlay?.querySelector('.ops-dialog')||document.body,
+        'Clerk is not configured. Set POSTFLIGHT_CLERK_PUBLISHABLE_KEY, POSTFLIGHT_CLERK_ISSUER and POSTFLIGHT_APP_ORIGIN.',
+        'error');return;
     }
-    if(!window.isSecureContext||!crypto?.subtle){
-      info(overlay.querySelector('.ops-dialog'),'A secure HTTPS or localhost origin is required for PKCE.','error');return;
-    }
-    const verifier=random(32),state=random(24);
-    const challenge=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier));
-    const encoded=btoa(String.fromCharCode(...new Uint8Array(challenge))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
-    sessionStorage.setItem('postflight.oauth.pkce',JSON.stringify({
-      verifier,state,kind,issuedAt:Date.now(),redirectUri:location.origin+'/'
-    }));
-    const q=new URLSearchParams({
-      response_type:'code',client_id:config.clientId,redirect_uri:location.origin+'/',
-      scope:'openid profile',state,code_challenge:encoded,code_challenge_method:'S256'
-    });
-    location.assign('https://'+config.hostedDomain+'/oauth2/authorize?'+q.toString());
-  }
-  async function callback(){
-    const url=new URL(location.href),code=url.searchParams.get('code');
-    const error=url.searchParams.get('error');
-    if(!code&&!error)return;
-    const saved=sessionStorage.getItem('postflight.oauth.pkce');
-    sessionStorage.removeItem('postflight.oauth.pkce');
-    history.replaceState(null,'',location.pathname+'#/workspaces');
-    if(!saved)throw new Error('OAuth session not found; start sign-in again');
-    const req=JSON.parse(saved);
-    if(Date.now()-req.issuedAt>300000||req.redirectUri!==location.origin+'/'
-      ||req.state!==url.searchParams.get('state'))throw new Error('OAuth state expired or mismatched');
-    if(error)throw new Error('Cognito sign-in failed: '+error);
-    if(!config?.enabled||!config?.hostedDomain)throw new Error('Cognito is not configured');
-    const body=new URLSearchParams({
-      grant_type:'authorization_code',client_id:config.clientId,
-      redirect_uri:req.redirectUri,code,code_verifier:req.verifier
-    });
-    const res=await fetch('https://'+config.hostedDomain+'/oauth2/token',{
-      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      credentials:'omit',cache:'no-store',body
-    });
-    if(!res.ok)throw new Error('Could not exchange authorization code with Cognito');
-    const payload=await res.json();
-    if(payload.token_type!=='Bearer'||typeof payload.access_token!=='string')
-      throw new Error('Invalid Cognito token response');
-    accessToken=payload.access_token;expiresAt=Date.now()+Math.min(Number(payload.expires_in||3600),86400)*1000;
-    await json('GET','/api/secure/me');
-    await openPage(req.kind||'secureWorkspaces');
+    pendingKind=kind;
+    clerk.openSignIn();
   }
   async function boot(){
-    try{
+    try {
       config=await json('GET','/api/secure/config');
-      await callback();
-    }catch(e){
-      const card=modal('Cognito sign-in','The identity flow did not complete.');
+      if(!config.enabled)return;
+      clerk=await window.PostFlightClerk.initialize(config);
+      clerk.addListener(({session})=>{
+        if(session && pendingKind){
+          const kind=pendingKind;
+          pendingKind=null;
+          void openPage(kind);
+        }
+      }, {skipInitialEmit:true});
+    } catch(e) {
+      const card=modal('Clerk sign-in','Authentication setup could not finish.');
       info(card,e.message,'error');
-      accessToken=null;expiresAt=0;
+      clerk=null;
     }
   }
   function gate(card,kind){
     if(!config?.enabled){
-      info(card,'CONFIGURATION REQUIRED — secure workspaces are disabled. No test identities or unauthenticated fallback are allowed. The shared demo organizations shown behind this dialog are illustrative only.');
-      info(card,'Configure POSTFLIGHT_COGNITO_USER_POOL_ID, POSTFLIGHT_COGNITO_CLIENT_ID and POSTFLIGHT_COGNITO_DOMAIN on a private runtime. Production remains read-only.');
+      info(card,'CONFIGURATION REQUIRED — secure workspaces are disabled. Sample organizations are illustrative only.');
+      info(card,'Configure POSTFLIGHT_CLERK_PUBLISHABLE_KEY, POSTFLIGHT_CLERK_ISSUER and POSTFLIGHT_APP_ORIGIN on a private runtime.');
       return true;
     }
-    if(!config.hostedDomain){
-      info(card,'Cognito pool and client are configured, but the hosted login domain is missing.','error');
+    if(!clerk){
+      info(card,'Clerk is not ready. Refresh after checking your configuration and network connection.','error');
       return true;
     }
     if(!canOperate()){
-      info(card,'Verified Amazon Cognito sign-in is required to access real tenant-scoped workspaces.');
-      button(card,'Sign in with Cognito',()=>startLogin(kind),true);
+      info(card,'Sign in with Clerk to access your private workspaces.');
+      button(card,'Sign in / Sign up',()=>startLogin(kind),true);
       return true;
     }
+    button(card,'Sign out',async()=>{await clerk.signOut();close();});
     return false;
   }
   async function showList(card){
@@ -174,10 +140,10 @@
         if(!workspaces.length){info(card,'Only an OWNER or ADMIN can invite members.','error');return;}
         const ws=row(form,'Workspace',{name:'workspace',options:workspaces.map(w=>({label:w.name,value:w.id}))});
         if(selectedWorkspace)ws.value=selectedWorkspace;
-        const sub=row(form,'Target Cognito user sub',{name:'sub',required:true,maxLength:100,
-          placeholder:'User UUID from verified Cognito profile'});
+        const sub=row(form,'Target Clerk user ID',{name:'sub',required:true,maxLength:100,
+          placeholder:'user_... ID from Clerk Dashboard'});
         const role=row(form,'Role',{name:'role',options:['VIEWER','REVIEWER','ADMIN'].map(v=>({value:v,label:v}))});
-        info(card,'Invitations are bound to an existing Cognito user UUID, expire after 24 hours, and can be used once. No invitation email is sent.');
+        info(card,'Invitations are bound to an exact Clerk user ID (user_...), expire after 24 hours, and can be used once. No invitation email is sent.');
         form.addEventListener('submit',e=>{e.preventDefault();void save(form,async()=>{
           const result=await json('POST','/api/secure/workspaces/'+ws.value+'/invitations',{
             targetSub:sub.value,role:role.value

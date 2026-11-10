@@ -12,10 +12,10 @@ import java.util.*;
  */
 public final class WorkspaceGateway {
     private final WorkspaceRegistry registry;
-    private final CognitoAccessVerifier verifier;
+    private final ClerkSessionVerifier verifier;
     public WorkspaceGateway(Path root) throws IOException {
         registry=new WorkspaceRegistry(root.resolve("data/secure-workspaces.json"));
-        verifier=CognitoAccessVerifier.configured()?CognitoAccessVerifier.fromEnvironment():null;
+        verifier=ClerkSessionVerifier.configured()?ClerkSessionVerifier.fromEnvironment():null;
     }
     private static ApiDispatcher.Answer out(int status,Object payload){
         return new ApiDispatcher.Answer(status,Json.stringify(payload));
@@ -28,15 +28,10 @@ public final class WorkspaceGateway {
         // Configuration reveals only public OAuth identifiers, never credentials.
         if(path.equals("/api/secure/config")&&method.equals("GET")){
             boolean enabled=verifier!=null&&!publicDemo;
-            String domain=System.getenv("POSTFLIGHT_COGNITO_DOMAIN");
-            if(domain==null)domain="";
-            domain=domain.trim().replaceFirst("^https://","");
-            if(!domain.matches("[A-Za-z0-9.-]{5,253}")||domain.startsWith(".")||domain.endsWith("."))
-                domain="";
-            return out(200,Map.of("enabled",enabled,"provider","Amazon Cognito",
-                "clientId",enabled?verifier.clientId():"",
-                "hostedDomain",enabled?domain:"",
-                "authFlow","authorization_code_pkce",
+            return out(200,Map.of("enabled",enabled,"provider","Clerk",
+                "publishableKey",enabled?System.getenv("POSTFLIGHT_CLERK_PUBLISHABLE_KEY"):"",
+                "issuer",enabled?verifier.issuer():"",
+                "authFlow","clerk_session",
                 "workspaceApi",enabled?"authenticated":"disabled",
                 "publicReadOnly",publicDemo));
         }
@@ -72,7 +67,7 @@ public final class WorkspaceGateway {
                     return out(200,registry.workspaceAudit(user,id));
             }
             return error(404,"Secure endpoint not found");
-        }catch(CognitoAccessVerifier.AuthFailure e){return error(e.status,e.getMessage());}
+        }catch(ClerkSessionVerifier.AuthFailure e){return error(e.status,e.getMessage());}
          catch(WorkspaceRegistry.Failure e){return error(e.status,e.getMessage());}
          catch(IllegalArgumentException e){return error(400,"Invalid request payload");}
          catch(Exception e){return error(500,"Secure request could not be processed");}
