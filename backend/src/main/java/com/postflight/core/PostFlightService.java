@@ -141,6 +141,7 @@ public final class PostFlightService {
     public synchronized Map<String,Object> workflowTest(Map<String,Object> req){String risk=optional(req,"risk","high",20);boolean high=risk.equalsIgnoreCase("high")||risk.equalsIgnoreCase("critical");List<Object> trace=new ArrayList<>();trace.add(doc("step","Content validation","status","PASS"));trace.add(doc("step","Risk classification","status",risk.toUpperCase(Locale.ROOT)));if(high)trace.add(doc("step","Legal review","status","REQUIRED"));trace.add(doc("step","Brand review","status","REQUIRED"));trace.add(doc("step","Release approval","status","PENDING"));return doc("simulation",true,"policy",PreflightRules.POLICY_VERSION,"trace",trace,"published",false);}
     public synchronized Map<String,Object> policySimulate(Map<String,Object> req){int strict=(int)longValue(req.get("strictness"),2);strict=Math.max(1,Math.min(5,strict));int affected=Math.min(list("drafts").size(),Math.max(0,strict-1)*2);return doc("simulation",true,"strictness",strict,"candidatePolicy","FIN-MKT-v3.5-draft","currentPolicy",activePolicy(),"draftsAffected",affected,"note","Estimated demonstration impact, not a server-wide regulatory assessment");}
     /** Local-only incident registration. Public demo mutation protection lives in ApiDispatcher. */
+    public synchronized List<Map<String,Object>> incidents(){return copy(list("alerts"));}
     public synchronized Map<String,Object> createIncident(Map<String,Object> req){
         String title=required(req,"title",140);
         String description=optional(req,"description","",2000);
