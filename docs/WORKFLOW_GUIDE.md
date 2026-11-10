@@ -233,9 +233,9 @@ This guide tells you exactly **where to click**, **what to enter** and **what ha
 
 **Result:** Your local `main` contains the approved changes.
 
-### 19. Daily scheduler and automatic failure handling (not active yet)
+### 19. Daily scheduler and automatic failure handling (installed on main)
 
-These steps apply **only after [PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6) is merged**:
+[PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6) has been **merged**. The schedule and guardian now exist on `main`, but automatic retries and notifications still need a controlled real-world test:
 
 1. Open **GitHub → Actions → PostFlight Complete QA**.
 2. Check for daily QA around **8:00 AM India time**. GitHub can start scheduled jobs late.
@@ -244,10 +244,11 @@ These steps apply **only after [PR #6](https://github.com/BackendArchitectX/post
 5. If the retry fails too, inspect the issue, logs and screenshots and prepare a **reviewed fix PR**.
 6. If the daily job does not start, the proposed **Scheduler Heartbeat** checks later and opens an issue.
 7. For code changes, go back to step 18: review, test and merge only when safe.
+8. If a Guardian issue or retry does not appear, check **GitHub → Actions → PostFlight CI Guardian** and repository Actions permissions. The watchdog itself depends on GitHub scheduling.
 
 **Result:** This can recover from a temporary test-machine/network problem. It **cannot automatically repair every code bug**. There is no automatic source-code rewrite, production deployment or social posting.
 
-For the technical details and safety rules, see [the PR #6 runbook](https://github.com/BackendArchitectX/postflight-enterprise/blob/chore/ci-self-healing-scheduler/docs/CI_SELF_HEALING.md).
+For exact times, retry limits and troubleshooting, read the [daily testing and failure recovery guide](CI_SELF_HEALING.md).
 
 ### 20. Secure teams and Cognito login (not active yet)
 
@@ -273,6 +274,6 @@ These instructions describe the **planned private test setup** in [PR #5](https:
 - Real Zernio publishing and scheduled social posts are **not built**.
 - Some dashboards, people, companies and activity numbers are **examples**.
 - “Approved” in this app means a local record, **not legal compliance approval**.
-- If a feature is in an open PR, it is **not yet part of `main`**.
+- If a feature is in an open PR, it is **not yet part of `main`**. The scheduler is merged; real unattended retry behavior is still unverified.
 
 **Start with workflows 1–4.** Once you understand those, try the others one at a time.
