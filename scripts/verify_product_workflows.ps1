@@ -25,7 +25,7 @@ $stateBefore = Invoke-RestMethod "$base/api/bootstrap"
 if ($stateBefore.runtime.mode -ne "public-read-only") { throw "Public demo mode missing." }
 
 Write-Host "3/6: Test actual stateless financial policy checks"
-$risk = Invoke-RestMethod -Uri "$base/api/demo/preflight" -Method POST -ContentType "application/json" -Body (@{ content = "Guaranteed returns on your investment!"; platform = "linkedin"; hasMedia = $false; altText = "" } | ConvertTo-Json -Compress)
+$risk = Invoke-RestMethod -Uri "$base/api/demo/preflight" -Method POST -ContentType "application/json" -Body (@{ content = "Invest now! Guaranteed 20% returns and instant profits. Contact advice@demo.example today."; platform = "linkedin"; hasMedia = $false; altText = "" } | ConvertTo-Json -Compress)
 if ($risk.status -ne "BLOCKED" -or $risk.summary.critical -lt 1) { throw "Risky content was not blocked." }
 Write-Host "PASS: Unverified return guarantee blocked"
 $safer = Invoke-RestMethod -Uri "$base/api/demo/preflight" -Method POST -ContentType "application/json" -Body (@{ content = "Learn about budgeting and financial planning. Investing involves risk, and past performance does not guarantee future results."; platform = "linkedin"; hasMedia = $false; altText = "" } | ConvertTo-Json -Compress)
