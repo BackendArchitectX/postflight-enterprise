@@ -243,6 +243,115 @@ async function deepProductChecks(p){
     }
     must(new Set(stageLengths).size>1,'All templates appear identical');
   });
+  await check('Operations: workflow simulation is isolated and does not publish',async()=>{
+    await go(p,'workflows');
+
+    const publicPosts=[];
+    const onRequest=req=>{
+      if(req.method()==='POST' &&
+         req.url().includes('/api/workflows/test')){
+        publicPosts.push(req.url());
+      }
+    };
+
+    p.on('request',onRequest);
+    try{
+      await p.locator('[data-action="testWorkflow"]').click();
+      await p.locator('#toasts .toast')
+        .filter({hasText:'Public demo is read-only'})
+        .waitFor({state:'visible',timeout:7000});
+    }finally{
+      p.off('request',onRequest);
+    }
+
+    must(publicPosts.length===0,
+      'Public mode attempted workflow execution');
+
+    const beforeResponse=
+      await context.request.get(editBase+'/api/bootstrap');
+
+    must(beforeResponse.status()===200,
+      'Editable backend unavailable');
+
+    const before=await beforeResponse.json();
+
+    await go(p,'workflows',editBase);
+
+    const [response]=await Promise.all([
+      p.waitForResponse(
+        r=>r.request().method()==='POST' &&
+           r.url()===editBase+'/api/workflows/test',
+        {timeout:10000}
+      ),
+      p.locator('[data-action="testWorkflow"]').click()
+    ]);
+
+    must(response.status()===200,
+      'Workflow simulation API failed');
+
+    const simulation=await response.json();
+
+    must(simulation.simulation===true,
+      'Response is not a simulation');
+
+    must(simulation.published===false,
+      'Simulation unexpectedly published content');
+
+    const actual=Array.isArray(simulation.trace)
+      ?simulation.trace.map(x=>x.step):[];
+
+    const expected=[
+      'Content validation',
+      'Risk classification',
+      'Legal review',
+      'Brand review',
+      'Release approval'
+    ];
+
+    must(JSON.stringify(actual)===JSON.stringify(expected),
+      'High-risk workflow stages are incorrect');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Workflow simulated server-side'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const afterResponse=
+      await context.request.get(editBase+'/api/bootstrap');
+
+    must(afterResponse.status()===200,
+      'Backend verification failed');
+
+    const after=await afterResponse.json();
+
+    must(
+      JSON.stringify(before.releasesIssued||[])===
+      JSON.stringify(after.releasesIssued||[]),
+      'Simulation unexpectedly issued a release'
+    );
+
+    must(
+      (before.audit||[]).length===(after.audit||[]).length,
+      'Simulation unexpectedly mutated the audit trail'
+    );
+
+    const lowResponse=await context.request.post(
+      editBase+'/api/workflows/test',
+      {data:{risk:'low'},failOnStatusCode:false}
+    );
+
+    must(lowResponse.status()===200,
+      'Low-risk simulation failed');
+
+    const low=await lowResponse.json();
+
+    must(
+      low.published===false &&
+      Array.isArray(low.trace) &&
+      !low.trace.some(x=>x.step==='Legal review'),
+      'Low-risk workflow incorrectly requires legal review'
+    );
+  });
+
   await check('Operations: public incident create and escalation cannot save changes',async()=>{
     await go(p,'incidents');
     await p.locator('[data-action="newIncident"]').click();
@@ -618,6 +727,30 @@ async function deepProductChecks(p){
             control:entry.control,
             method:'browser click + API persistence + reload',
             evidence:saveDraftTest
+          });
+          return false;
+        }
+        return true;
+      });
+    }
+
+    const workflowTestName =
+      'Operations: workflow simulation is isolated and does not publish';
+
+    if(result.checks.some(
+      x=>x.name===workflowTestName&&x.status==='PASS'
+    )){
+      const inventory=result.routeInventory.workflows;
+      inventory.coveredByDedicatedTests=
+        inventory.coveredByDedicatedTests||[];
+
+      inventory.notExercised=inventory.notExercised.filter(entry=>{
+        if(entry.control?.key==='data-action' &&
+           entry.control?.value==='testWorkflow'){
+          inventory.coveredByDedicatedTests.push({
+            control:entry.control,
+            method:'public denial + real UI simulation + API verification',
+            evidence:workflowTestName
           });
           return false;
         }
