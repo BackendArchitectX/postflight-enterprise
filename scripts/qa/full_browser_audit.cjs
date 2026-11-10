@@ -185,6 +185,68 @@ async function startBrowser() {
   throw new Error('No Chromium-based browser available. Install Chrome, Edge or Playwright Chromium. '+failures.join(' | '));
 }
 async function deepProductChecks(p){
+  await check('Operations: all three workflow template previews show distinct server-defined steps',async()=>{
+    const stageLengths=[];
+    for(let i=0;i<3;i++){
+      await go(p,'workflows');
+      await p.locator('[data-workflow-tab="templates"]').click();
+      await p.locator('[data-action="previewWorkflow"]').nth(i).click();
+      const modal=p.locator('.ops-dialog');
+      await modal.waitFor({state:'visible'});
+      const steps=await modal.locator('.ops-stage').count();
+      must(steps>=3,'Template '+i+' does not have actual stages');
+      const title=await modal.locator('h2').innerText();
+      must(title.includes('v1.0'),'Template '+i+' missing version');
+      stageLengths.push(steps);
+      await modal.getByRole('button',{name:'Close preview'}).click();
+    }
+    must(new Set(stageLengths).size>1,'All templates appear identical');
+  });
+  await check('Operations: public incident create and escalation cannot save changes',async()=>{
+    await go(p,'incidents');
+    await p.locator('[data-action="newIncident"]').click();
+    const modal=p.locator('.ops-dialog');
+    await modal.waitFor({state:'visible'});
+    must(await modal.locator('button[type=submit]').isDisabled(),'Public create incident was enabled');
+    must((await modal.innerText()).includes('Public demo is read-only'),'Missing public-mode disclosure');
+    await modal.getByRole('button',{name:'Close'}).click();
+    await p.locator('[data-action="escalateIncident"]').click();
+    await modal.waitFor({state:'visible'});
+    must(await modal.locator('button[type=submit]').isDisabled(),'Public escalation enabled');
+  });
+  await check('Operations: editable UI creates then escalates an actual incident',async()=>{
+    await go(p,'incidents',editBase);
+    await p.locator('[data-action="newIncident"]').click();
+    const modal=p.locator('.ops-dialog');
+    await modal.waitFor({state:'visible'});
+    await modal.locator('#ops-title').fill('Browser QA escalation walkthrough');
+    await modal.locator('#ops-description').fill('Disposable operational test data');
+    await modal.locator('#ops-owner').fill('QA Incident Lead');
+    await modal.locator('button[type=submit]').click();
+    await modal.getByText(/created and audited/).waitFor();
+    const text=await modal.locator('.ops-status').innerText();
+    const match=text.match(/PF-INC-\d+/);
+    must(!!match,'New incident identifier missing');
+    const id=match[0];
+    await modal.getByRole('button',{name:'View updated incidents'}).click();
+    await awaitReady(p);
+    const record=p.locator('tr[data-incident="'+id+'"]');
+    await record.waitFor({state:'visible'});
+    await record.click();
+    await p.locator('[data-action="escalateIncident"]').click();
+    await modal.waitFor({state:'visible'});
+    await modal.locator('#ops-reason').fill('Need legal review for a high-risk claim');
+    await modal.locator('#ops-assignedTo').fill('Legal QA');
+    await modal.locator('button[type=submit]').click();
+    await modal.getByText(/escalated to level 1/).waitFor();
+    const response=await context.request.get(editBase+'/api/incidents');
+    must(response.status()===200,'Incident persistence endpoint unavailable');
+    const incidents=await response.json();
+    const updated=incidents.find(x=>x.id===id);
+    must(updated?.owner==='Legal QA'&&updated.escalationLevel===1&&updated.status==='Investigating',
+      'Incident escalation not persisted in Java state');
+  });
+
   await check('Preflight: high-risk content blocked',async()=>{
     await go(p,'playground');
     await p.locator('[data-pf-sample="0"]').click();
