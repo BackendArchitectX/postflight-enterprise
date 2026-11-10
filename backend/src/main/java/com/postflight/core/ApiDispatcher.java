@@ -40,6 +40,10 @@ public final class ApiDispatcher {
         else if(method.equals("GET")&&path.equals("/api/releases"))response=service.releases();
         else if(method.equals("GET")&&seg.length==5&&seg[2].equals("releases")&&seg[4].equals("verify"))response=service.verifyRelease(seg[3]);
         else if(method.equals("GET")&&path.equals("/api/audit"))response=service.auditReport();
+        else if(method.equals("GET")&&path.equals("/api/incidents"))response=service.incidents();
+        else if(method.equals("POST")&&path.equals("/api/incidents"))return out(201,service.createIncident(payload));
+        else if(method.equals("POST")&&seg.length==5&&seg[2].equals("incidents")&&seg[4].equals("escalate"))response=service.escalateIncident(seg[3],payload);
+        else if(method.equals("GET")&&path.equals("/api/workflows/templates"))response=service.workflowTemplates();
         else if(method.equals("POST")&&path.equals("/api/workflows/test"))response=service.workflowTest(payload);
         else if(method.equals("POST")&&path.equals("/api/policies/simulate"))response=service.policySimulate(payload);
         else if(method.equals("GET")&&path.equals("/api/policies"))response=service.getPolicies();
