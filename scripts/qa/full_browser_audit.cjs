@@ -346,16 +346,12 @@ async function deepProductChecks(p){
     await p.locator('#draftTitle').fill(title);
     await p.locator('#draftBody').fill(body);
 
-    const responsePromise=p.waitForResponse(
-      r=>r.request().method()==='PUT' &&
-         r.url().endsWith('/api/drafts/'+encodeURIComponent(draft.id)),
-      {timeout:10000}
-    );
-
     await p.locator('button[data-action="saveDraft"]').click();
 
-    const response=await responsePromise;
-    must(response.status()===200,'Save draft API rejected the update');
+    // Wait for the explicit Save action to finish, not an earlier autosave.
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Draft persisted to local Java backend'})
+      .waitFor({state:'visible',timeout:10000});
 
     const bootstrap=await context.request.get(editBase+'/api/bootstrap');
     must(bootstrap.status()===200,'Backend reload failed');
