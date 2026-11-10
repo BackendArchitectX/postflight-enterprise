@@ -19,23 +19,26 @@ public final class LocalServer implements AutoCloseable{
  public LocalServer(int port,Path root)throws Exception{
   Path data=root.resolve("data"),seed=root.resolve("docs/seed.json");web=root.resolve("web").toAbsolutePath().normalize();
   PostFlightService service=new PostFlightService(data,seed);api=new ApiDispatcher(service);
-  workspaceGateway=new WorkspaceGateway(root);
   boolean publicDemo="true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PUBLIC_DEMO"));
   boolean privateProxy="true".equalsIgnoreCase(System.getenv("POSTFLIGHT_PRIVATE_PROXY"));
   privateProxyOrigin=verifiedProxyOrigin(privateProxy&&!publicDemo,
-      CognitoAccessVerifier.configured(),System.getenv("POSTFLIGHT_APP_ORIGIN"));
+      ClerkSessionVerifier.configured(),System.getenv("POSTFLIGHT_APP_ORIGIN"));
+  Set<String> authorizedOrigins=privateProxyOrigin.isEmpty()
+      ? Set.of("http://localhost:"+port,"http://127.0.0.1:"+port)
+      : Set.of(privateProxyOrigin);
+  workspaceGateway=new WorkspaceGateway(root,authorizedOrigins);
   String bindHost = publicDemo || privateProxy ? "0.0.0.0" : "127.0.0.1";
   server=HttpServer.create(new InetSocketAddress(bindHost,port),0);
   server.createContext("/",this::handle);server.setExecutor(Executors.newFixedThreadPool(8));
  }
  /**
   * Explicit TLS reverse-proxy origin. The secure runtime NEVER binds to an
-  * external interface unless both Cognito and the expected HTTPS origin exist.
+  * external interface unless both Clerk and the expected HTTPS origin exist.
   * Supplying a Host or X-Forwarded-Proto request header cannot enable this.
   */
- static String verifiedProxyOrigin(boolean privateProxy,boolean cognitoConfigured,String raw) {
+ static String verifiedProxyOrigin(boolean privateProxy,boolean identityConfigured,String raw) {
   if(!privateProxy)return "";
-  if(!cognitoConfigured)throw new IllegalArgumentException("Private proxy requires configured Cognito");
+  if(!identityConfigured)throw new IllegalArgumentException("Private proxy requires configured Clerk");
   try {
    URI uri=URI.create(Objects.requireNonNull(raw,"POSTFLIGHT_APP_ORIGIN required"));
    if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getHost().isBlank()
@@ -95,9 +98,9 @@ public final class LocalServer implements AutoCloseable{
       }catch(ZernioClient.Failure e){send(ex,e.status,Json.stringify(Map.of("error",e.getMessage())));}
       return;
     }
-    // When Cognito is enabled, never expose the old shared, unauthenticated
+    // When Clerk is enabled, never expose the old shared, unauthenticated
     // demo database as tenant data or allow legacy unscoped mutations.
-    if(CognitoAccessVerifier.configured()&&!path.startsWith("/api/secure/")
+    if(ClerkSessionVerifier.configured()&&!path.startsWith("/api/secure/")
         &&!path.equals("/api/health")&&!path.equals("/api/demo/preflight")){
       send(ex,403,Json.stringify(Map.of("error","Legacy demo API disabled in authenticated mode; use /api/secure")));
       return;
@@ -111,12 +114,20 @@ public final class LocalServer implements AutoCloseable{
    Path file=(path.equals("/")?web.resolve("index.html"):web.resolve(path.substring(1))).normalize();
    if(!file.startsWith(web)||!Files.isRegularFile(file)){send(ex,404,"Not found");return;}
    h.set("Content-Type",path.endsWith(".js")?"text/javascript; charset=utf-8":path.endsWith(".css")?"text/css; charset=utf-8":path.endsWith(".png")?"image/png":path.endsWith(".svg")?"image/svg+xml":"text/html; charset=utf-8");
-   String cognitoDomain=System.getenv("POSTFLIGHT_COGNITO_DOMAIN");
-   if(cognitoDomain==null)cognitoDomain="";
-   cognitoDomain=cognitoDomain.trim().replaceFirst("^https://","");
-   String cognitoConnect=CognitoAccessVerifier.configured()&&cognitoDomain.matches("[A-Za-z0-9.-]{5,253}")&&!cognitoDomain.startsWith(".")&&!cognitoDomain.endsWith(".")
-       ?" https://"+cognitoDomain:"";
-   h.set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"+cognitoConnect+"; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+   String frontend=ClerkSessionVerifier.configured()&&!publicDemo
+       ?ClerkSessionVerifier.frontendOrigin(System.getenv("POSTFLIGHT_CLERK_PUBLISHABLE_KEY")):"";
+   String clerkCsp=frontend.isEmpty()?"":(
+       " "+frontend+" https://challenges.cloudflare.com https://*.protect.clerk.com");
+   String scripts="script-src 'self'"+clerkCsp+"; ";
+   String connections="connect-src 'self'"+(frontend.isEmpty()?"":(
+       " "+frontend+" https://*.protect.clerk.com:*"))+"; ";
+   String images="img-src 'self' data:"+(frontend.isEmpty()?"":" https://img.clerk.com")+"; ";
+   String frame="frame-src 'self'"+(frontend.isEmpty()?"":(
+       " https://challenges.cloudflare.com https://*.protect.clerk.com"))+"; ";
+   h.set("Content-Security-Policy","default-src 'self'; "+scripts+
+       "style-src 'self' 'unsafe-inline'; "+images+connections+
+       "worker-src 'self' blob:; "+frame+
+       "base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
    if(path.equals("/")||path.endsWith(".html")||path.endsWith(".js")||path.endsWith(".css")) h.set("Cache-Control","no-cache, must-revalidate");
    byte[] bytes=Files.readAllBytes(file);ex.sendResponseHeaders(200,method.equals("HEAD")?-1:bytes.length);if(!method.equals("HEAD")){try(OutputStream out=ex.getResponseBody()){out.write(bytes);}}
   }catch(Exception e){try{send(ex,500,"Internal error");}catch(Exception ignored){}}finally{ex.close();}
