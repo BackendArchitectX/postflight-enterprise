@@ -12,9 +12,11 @@ import java.util.*;
  */
 public final class WorkspaceGateway {
     private final WorkspaceRegistry registry;
+    private final WorkspaceDraftStore drafts;
     private final ClerkSessionVerifier verifier;
     public WorkspaceGateway(Path root) throws IOException {
         registry=new WorkspaceRegistry(root.resolve("data/secure-workspaces.json"));
+        drafts=new WorkspaceDraftStore(root.resolve("data/workspace-drafts"));
         verifier=ClerkSessionVerifier.configured()?ClerkSessionVerifier.fromEnvironment():null;
     }
     private static ApiDispatcher.Answer out(int status,Object payload){
@@ -53,6 +55,28 @@ public final class WorkspaceGateway {
             if(parts.length>=5&&parts[1].equals("api")&&parts[2].equals("secure")&&parts[3].equals("workspaces")){
                 String id=parts[4];
                 if(!id.matches("ws_[0-9a-f]{32}"))return error(404,"Workspace not found");
+                if(parts.length>=6&&parts[5].equals("drafts")){
+                    // Resolve membership BEFORE looking up any workspace-specific data.
+                    Map<String,Object> workspace=registry.workspace(user,id);
+                    String role=String.valueOf(workspace.get("yourRole"));
+                    boolean writable=List.of("OWNER","ADMIN").contains(role);
+                    if(parts.length==6){
+                        if(method.equals("GET"))return out(200,drafts.list(id));
+                        if(method.equals("POST")){
+                            if(!writable)return error(403,"Role does not permit draft changes");
+                            return out(201,drafts.create(id,user.sub(),Json.object(Json.parse(body))));
+                        }
+                    }
+                    if(parts.length==7){
+                        String draftId=parts[6];
+                        if(method.equals("GET"))return out(200,drafts.get(id,draftId));
+                        if(method.equals("PUT")){
+                            if(!writable)return error(403,"Role does not permit draft changes");
+                            return out(200,drafts.update(id,draftId,user.sub(),Json.object(Json.parse(body))));
+                        }
+                    }
+                    return error(404,"Secure draft endpoint not found");
+                }
                 if(parts.length==5&&method.equals("GET"))
                     return out(200,registry.workspace(user,id));
                 if(parts.length==6&&parts[5].equals("members")&&method.equals("GET"))

@@ -107,6 +107,7 @@
     for(const w of list){
       const item=el('div',undefined,'ops-stage');
       item.append(el('strong',w.name+' · '+w.yourRole),el('p',w.memberCount+' member(s) · '+w.id));
+      button(item,'Workspace drafts',()=>void showDrafts(w.id,w.name,w.yourRole));
       if(['OWNER','ADMIN'].includes(w.yourRole)){
         button(item,'Invite user',()=>void openPage('invite',w.id));
         button(item,'Members',async()=>{
@@ -119,6 +120,68 @@
       items.append(item);
     }
     card.append(items);
+  }
+  // Secure drafts intentionally stay separate from the legacy demo Content Studio.
+  async function showDrafts(workspaceId,workspaceName,role){
+    const card=modal('Workspace drafts · '+workspaceName,
+      'Clerk-authenticated drafts isolated to this workspace. Shared demo drafts are not included.');
+    if(gate(card,'secureWorkspaces'))return;
+    try{
+      const drafts=await json('GET','/api/secure/workspaces/'+workspaceId+'/drafts');
+      const canEdit=['OWNER','ADMIN'].includes(role);
+      button(card,'Back to workspaces',()=>openPage('secureWorkspaces'));
+      if(canEdit)button(card,'New workspace draft',()=>showDraftEditor(workspaceId,workspaceName,role,null),true);
+      info(card,drafts.length?drafts.length+' saved draft(s) in this workspace.':'No drafts yet in this workspace.');
+      const items=el('div',undefined,'ops-stages');
+      for(const d of drafts){
+        const item=el('div',undefined,'ops-stage');
+        item.append(el('strong',d.title),el('p','Version '+d.version+' · '+d.status+' · '+d.updatedAt));
+        button(item,canEdit?'Open / Edit':'View draft',()=>showDraftEditor(workspaceId,workspaceName,role,d.id));
+        items.append(item);
+      }
+      card.append(items);
+    }catch(e){info(card,e.message,'error');}
+  }
+  async function showDraftEditor(workspaceId,workspaceName,role,draftId){
+    const canEdit=['OWNER','ADMIN'].includes(role);
+    const card=modal(draftId?'Workspace draft':'New workspace draft',
+      workspaceName+' · '+(canEdit?'Editable for OWNER / ADMIN':'Read-only for your role'));
+    if(gate(card,'secureWorkspaces'))return;
+    try{
+      const existing=draftId?await json('GET','/api/secure/workspaces/'+workspaceId+'/drafts/'+draftId):null;
+      button(card,'Back to workspace drafts',()=>showDrafts(workspaceId,workspaceName,role));
+      const form=el('form',undefined,'ops-form');
+      const title=row(form,'Draft title',{name:'draftTitle',required:true,maxLength:160,
+        placeholder:'e.g. November product announcement'});
+      title.value=existing?.title||'';
+      const area=el('div',undefined,'ops-field');
+      const label=el('label','Draft body');
+      const body=el('textarea',undefined,'ops-draft-body');
+      body.id='ws-draft-body';label.htmlFor=body.id;body.maxLength=20000;body.rows=7;
+      body.placeholder='Write your workspace-specific content here';body.value=existing?.body||'';
+      body.style.width='100%';body.style.minHeight='140px';body.style.padding='12px';
+      body.style.border='1px solid var(--border, #cbd5e1)';body.style.borderRadius='8px';
+      area.append(label,body);form.append(area);
+      if(!canEdit){title.disabled=true;body.disabled=true;info(card,'Your role can view this draft but cannot change it.');}
+      else{
+        const submit=el('button',existing?'Save changes':'Create draft','ops-primary');
+        submit.type='submit';form.append(submit);
+        form.addEventListener('submit',async e=>{
+          e.preventDefault();if(busy)return;
+          busy=true;submit.disabled=true;
+          try{
+            const path='/api/secure/workspaces/'+workspaceId+'/drafts'+(existing?'/'+existing.id:'');
+            const payload={title:title.value,body:body.value};
+            if(existing)payload.version=existing.version;
+            await json(existing?'PUT':'POST',path,payload);
+            busy=false;
+            await showDrafts(workspaceId,workspaceName,role);
+          }catch(error){info(card,error.message,'error');}
+          finally{busy=false;submit.disabled=false;}
+        });
+      }
+      card.append(form);
+    }catch(e){info(card,e.message,'error');}
   }
   async function openPage(kind,selectedWorkspace){
     const title={newWorkspace:'New secure workspace',invite:'Invite workspace member',
