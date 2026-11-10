@@ -1072,6 +1072,355 @@ async function deepProductChecks(p){
     must(JSON.stringify(left.drafts)===JSON.stringify(right.drafts),'Public drafts mutated');
     must(left.runtime.mode==='public-read-only','Public mode missing');
   });
+  await check('Operations: incident resolution persists with audit evidence',async()=>{
+    await go(p,'incidents');
+
+    const publicRequests=[];
+    const publicObserver=req=>{
+      if(req.method()==='PATCH'&&
+         req.url().includes('/api/incidents/')){
+        publicRequests.push(req.url());
+      }
+    };
+
+    p.on('request',publicObserver);
+    try{
+      await p.locator('[data-action="resolveIncident"]').click();
+      await p.locator('#toasts .toast')
+        .filter({hasText:'Public demo is read-only'})
+        .waitFor({state:'visible',timeout:7000});
+    }finally{
+      p.off('request',publicObserver);
+    }
+
+    must(publicRequests.length===0,
+      'Public UI attempted incident mutation');
+
+    const created=await context.request.post(
+      editBase+'/api/incidents',{
+        data:{
+          title:'QA browser incident resolution',
+          description:'Disposable incident for resolution lifecycle',
+          owner:'Browser QA Operations',
+          severity:'Medium'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(created.status()===201,'Incident creation failed');
+
+    const incident=await created.json();
+    must(incident.status==='Open','New incident was not Open');
+
+    await go(p,'incidents',editBase);
+
+    const row=p.locator(
+      'tr[data-incident="'+incident.id+'"]'
+    );
+
+    await row.waitFor({state:'visible',timeout:7000});
+    await row.click();
+
+    const endpoint=editBase+'/api/incidents/'+encodeURIComponent(incident.id);
+
+    const [response]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='PATCH'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('[data-action="resolveIncident"]').click()
+    ]);
+
+    must(response.status()===200,
+      'Incident resolution request failed');
+
+    const resolved=await response.json();
+
+    must(resolved.id===incident.id&&resolved.status==='Resolved',
+      'Backend returned incorrect resolution state');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Incident status saved on server'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const incidentsResponse=await context.request.get(
+      editBase+'/api/incidents'
+    );
+
+    must(incidentsResponse.status()===200,
+      'Incident listing failed');
+
+    const incidents=await incidentsResponse.json();
+
+    must(incidents.some(x=>
+      x.id===incident.id&&x.status==='Resolved'
+    ),'Resolved incident was not persisted');
+
+    const auditResponse=await context.request.get(
+      editBase+'/api/audit'
+    );
+
+    must(auditResponse.status()===200,
+      'Incident audit retrieval failed');
+
+    const audit=await auditResponse.json();
+
+    must(audit.chainValid===true,
+      'Audit chain invalid');
+
+    must(audit.events.some(e=>
+      e.action==='INCIDENT_STATUS'&&
+      e.entityId===incident.id&&
+      e.detail==='Resolved'
+    ),'Resolution audit event missing');
+
+    await go(p,'incidents',editBase);
+
+    const persisted=p.locator(
+      'tr[data-incident="'+incident.id+'"]'
+    );
+
+    await persisted.waitFor({state:'visible'});
+
+    must((await persisted.innerText()).includes('Resolved'),
+      'Resolved status disappeared after reload');
+
+    const escalation=await context.request.post(
+      editBase+'/api/incidents/'+encodeURIComponent(incident.id)+'/escalate',{
+        data:{
+          reason:'QA must reject escalation of resolved incidents',
+          assignedTo:'Browser QA Operations'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(escalation.status()===409,
+      'Resolved incident could still be escalated');
+  });
+
+  // Deliberately LAST: resets only the disposable editable QA server.
+  await check('Safety: demo reset requires confirmation and restores disposable seed',async()=>{
+    const publicReset=await context.request.post(
+      base+'/api/admin/reset',{
+        data:{},
+        failOnStatusCode:false
+      }
+    );
+
+    must(publicReset.status()===403,
+      'Public demo reset endpoint was writable');
+
+    const canaryDraftResponse=await context.request.post(
+      editBase+'/api/drafts',{
+        data:{
+          title:'QA disposable reset canary',
+          body:'This draft must disappear after reset.',
+          platforms:'LinkedIn'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(canaryDraftResponse.status()===201,
+      'Could not prepare reset canary draft');
+
+    const canaryDraft=await canaryDraftResponse.json();
+
+    const canaryIncidentResponse=await context.request.post(
+      editBase+'/api/incidents',{
+        data:{
+          title:'QA disposable reset canary incident',
+          description:'This incident must disappear after reset',
+          owner:'Browser QA',
+          severity:'Low'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(canaryIncidentResponse.status()===201,
+      'Could not prepare reset canary incident');
+
+    const canaryIncident=await canaryIncidentResponse.json();
+
+    const publicBeforeResponse=await context.request.get(
+      base+'/api/bootstrap'
+    );
+
+    must(publicBeforeResponse.status()===200,
+      'Public baseline unavailable');
+
+    const publicBefore=await publicBeforeResponse.json();
+
+    const resetUrl=editBase+'/api/admin/reset';
+
+    // Separate page avoids the global auto-dismiss dialog handler.
+    const resetPage=await context.newPage();
+    resetPage.setDefaultTimeout(6000);
+
+    resetPage.on('pageerror',err=>
+      result.errors.push('Reset test browser error: '+err.message)
+    );
+
+    try{
+      await go(resetPage,'settings',editBase);
+
+      const requests=[];
+
+      resetPage.on('request',req=>{
+        if(req.method()==='POST'&&req.url()===resetUrl){
+          requests.push(req.url());
+        }
+      });
+
+      let cancellationPrompt=false;
+
+      resetPage.once('dialog',async dialog=>{
+        cancellationPrompt=
+          dialog.type()==='confirm'&&
+          dialog.message().includes('Reset all stored local demo data?');
+        await dialog.dismiss();
+      });
+
+      await resetPage.locator(
+        '[data-action="resetDemo"]'
+      ).click();
+
+      must(cancellationPrompt,
+        'Reset did not present the expected confirmation');
+
+      must(requests.length===0,
+        'Cancel triggered a reset request');
+
+      const unchangedResponse=await context.request.get(
+        editBase+'/api/bootstrap'
+      );
+
+      must(unchangedResponse.status()===200,
+        'Backend unavailable after cancellation');
+
+      const unchanged=await unchangedResponse.json();
+
+      must(unchanged.drafts.some(x=>x.id===canaryDraft.id),
+        'Cancelled reset deleted the draft');
+
+      must(unchanged.alerts.some(x=>x.id===canaryIncident.id),
+        'Cancelled reset deleted the incident');
+
+      let acceptancePrompt=false;
+
+      resetPage.once('dialog',async dialog=>{
+        acceptancePrompt=
+          dialog.type()==='confirm'&&
+          dialog.message().includes('Reset all stored local demo data?');
+        await dialog.accept();
+      });
+
+      const [response]=await Promise.all([
+        resetPage.waitForResponse(r=>
+          r.request().method()==='POST'&&r.url()===resetUrl,
+          {timeout:12000}
+        ),
+        resetPage.locator('[data-action="resetDemo"]').click()
+      ]);
+
+      must(acceptancePrompt,
+        'Expected reset confirmation was not accepted');
+
+      must(response.status()===200,
+        'Confirmed reset failed');
+
+      must(requests.length===1,
+        'Expected exactly one reset request');
+
+      await resetPage.locator('#toasts .toast')
+        .filter({hasText:'Local server data reset'})
+        .waitFor({state:'visible',timeout:10000});
+
+      const afterResponse=await context.request.get(
+        editBase+'/api/bootstrap'
+      );
+
+      must(afterResponse.status()===200,
+        'Backend unavailable after reset');
+
+      const after=await afterResponse.json();
+
+      must(!after.drafts.some(x=>x.id===canaryDraft.id),
+        'Draft survived confirmed reset');
+
+      must(!after.alerts.some(x=>x.id===canaryIncident.id),
+        'Incident survived confirmed reset');
+
+      const original=JSON.parse(
+        fs.readFileSync(
+          path.resolve(__dirname,'../../docs/seed.json'),
+          'utf8'
+        )
+      );
+
+      must(after.drafts.length===original.drafts.length,
+        'Draft count not restored to original seed');
+
+      must(after.alerts.length===original.alerts.length,
+        'Incident count not restored to original seed');
+
+      must(after.drafts.every(x=>
+        original.drafts.some(y=>y.id===x.id)
+      ),'Original draft identities not restored');
+
+      must(after.alerts.every(x=>
+        original.alerts.some(y=>y.id===x.id)
+      ),'Original incident identities not restored');
+
+      const auditResponse=await context.request.get(
+        editBase+'/api/audit'
+      );
+
+      must(auditResponse.status()===200,
+        'Audit unavailable after reset');
+
+      const audit=await auditResponse.json();
+
+      must(audit.chainValid===true,
+        'Reset audit chain invalid');
+
+      must(audit.events.some(e=>e.action==='DEMO_RESET'),
+        'Reset audit event missing');
+
+      await go(resetPage,'settings',editBase);
+
+      const reloaded=await (
+        await context.request.get(editBase+'/api/bootstrap')
+      ).json();
+
+      must(!reloaded.drafts.some(x=>x.id===canaryDraft.id),
+        'Reset draft returned after reload');
+
+      must(!reloaded.alerts.some(x=>x.id===canaryIncident.id),
+        'Reset incident returned after reload');
+
+      const publicAfter=await (
+        await context.request.get(base+'/api/bootstrap')
+      ).json();
+
+      must(
+        JSON.stringify(publicBefore.drafts)===
+        JSON.stringify(publicAfter.drafts),
+        'Reset unexpectedly changed public drafts'
+      );
+
+      must(
+        JSON.stringify(publicBefore.alerts)===
+        JSON.stringify(publicAfter.alerts),
+        'Reset unexpectedly changed public incidents'
+      );
+    }finally{
+      await resetPage.close();
+    }
+  });
 }
 (async()=>{
  try {
@@ -1244,6 +1593,44 @@ async function deepProductChecks(p){
           return false;
         }
         return true;
+      });
+    }
+    const finalActions=[
+      {
+        route:'incidents',
+        action:'resolveIncident',
+        test:'Operations: incident resolution persists with audit evidence',
+        method:'browser PATCH + persistence + audit + reload'
+      },
+      {
+        route:'settings',
+        action:'resetDemo',
+        test:'Safety: demo reset requires confirmation and restores disposable seed',
+        method:'cancel and accept confirmation + seed restore + audit'
+      }
+    ];
+
+    for(const item of finalActions){
+      if(!result.checks.some(
+        x=>x.name===item.test&&x.status==='PASS'
+      ))continue;
+
+      const inventory=result.routeInventory[item.route];
+
+      inventory.coveredByDedicatedTests=
+        inventory.coveredByDedicatedTests||[];
+
+      inventory.notExercised=inventory.notExercised.filter(entry=>{
+        if(entry.control?.key!=='data-action'||
+           entry.control?.value!==item.action)return true;
+
+        inventory.coveredByDedicatedTests.push({
+          control:entry.control,
+          method:item.method,
+          evidence:item.test
+        });
+
+        return false;
       });
     }
    const unimplemented=Object.values(result.routeInventory).flatMap(x=>x.unimplemented||[]);
