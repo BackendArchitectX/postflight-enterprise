@@ -194,6 +194,37 @@ async function startBrowser() {
   throw new Error('No Chromium-based browser available. Install Chrome, Edge or Playwright Chromium. '+failures.join(' | '));
 }
 async function deepProductChecks(p){
+  await check('Security: protected workspace buttons require Cognito setup',async()=>{
+    for(const action of ['newWorkspace','invite','secureWorkspaces','joinWorkspace']){
+      await go(p,'workspaces');
+      await p.locator('[data-action="'+action+'"]').first().click();
+      const dialog=p.locator('.ops-dialog');
+      await dialog.waitFor({state:'visible',timeout:6000});
+      await dialog.getByText(/CONFIGURATION REQUIRED/).waitFor({timeout:6000});
+      must(await dialog.locator('button[type=submit]').count()===0,
+        action+' allowed unauthenticated mutation');
+      await dialog.getByRole('button',{name:'Close'}).click();
+    }
+    await go(p,'settings');
+    await p.locator('[data-action="invite"]').first().click();
+    await p.locator('.ops-dialog').getByText(/CONFIGURATION REQUIRED/).waitFor();
+  });
+  await check('Security: isolated Cognito API denies anonymous and public writes',async()=>{
+    const config=await context.request.get(base+'/api/secure/config');
+    must(config.status()===200,'Public workspace config missing');
+    const c=await config.json();
+    must(c.enabled===false && c.publicReadOnly===true,'Public workspace API unexpectedly enabled');
+    const write=await context.request.post(base+'/api/secure/workspaces',{
+      data:{name:'Unauthorized visitor'},failOnStatusCode:false});
+    must(write.status()===403,'Public workspace creation not denied');
+    const anonymous=await context.request.get(editBase+'/api/secure/workspaces',{
+      failOnStatusCode:false});
+    must([401,503].includes(anonymous.status()),'Anonymous private workspace data exposed');
+    const demo=await context.request.get(editBase+'/api/bootstrap');
+    const payload=await demo.json();
+    must(!Object.prototype.hasOwnProperty.call(payload,'secureWorkspaces'),
+      'Private workspace state leaked to shared demo bootstrap');
+  });
   await check('Operations: all three workflow template previews show distinct server-defined steps',async()=>{
     const stageLengths=[];
     for(let i=0;i<3;i++){
