@@ -42,7 +42,7 @@ public final class PostFlightService {
     private static long longValue(Object value,long fallback){if(value instanceof Number n)return n.longValue();try{return Long.parseLong(str(value));}catch(Exception e){return fallback;}}
     private void normalize(){
         state.putIfAbsent("drafts",new ArrayList<>());state.putIfAbsent("reviewStatus",new LinkedHashMap<>());state.putIfAbsent("alerts",new ArrayList<>());
-        state.putIfAbsent("mediaAssets",new ArrayList<>());state.putIfAbsent("customRules",new ArrayList<>());state.putIfAbsent("policyRevision",0L);state.putIfAbsent("validationRuns",new ArrayList<>());state.putIfAbsent("releasesIssued",new ArrayList<>());state.putIfAbsent("audit",new ArrayList<>());state.putIfAbsent("lastRuns",new LinkedHashMap<>());
+        state.putIfAbsent("mediaAssets",new ArrayList<>());state.putIfAbsent("customRules",new ArrayList<>());state.putIfAbsent("policyRevision",0L);state.putIfAbsent("validationRuns",new ArrayList<>());state.putIfAbsent("releasesIssued",new ArrayList<>());state.putIfAbsent("audit",new ArrayList<>());state.putIfAbsent("lastRuns",new LinkedHashMap<>());state.putIfAbsent("approvalRequests",new ArrayList<>());state.putIfAbsent("policyPublications",new ArrayList<>());state.putIfAbsent("workflowSteps",new LinkedHashMap<>());state.putIfAbsent("workflowRevisions",new ArrayList<>());
         if(!state.containsKey("certificateSecret")){byte[] secret=new byte[32];new SecureRandom().nextBytes(secret);state.put("certificateSecret",HexFormat.of().formatHex(secret));}
         for(Map<String,Object> d:list("drafts")){d.putIfAbsent("version",1L);d.putIfAbsent("altText","");}
         sequence.set(Math.max(longValue(state.get("sequence"),2100),2100));
@@ -77,7 +77,7 @@ public final class PostFlightService {
         Map<String,Object> d=draft(id);if(req.containsKey("expectedVersion")&&longValue(req.get("expectedVersion"),-1)!=longValue(d.get("version"),1))throw new ApiError(409,"Version conflict. Reload the draft.");
         String title=optional(req,"title",get(d,"title"),180),body=optional(req,"body",get(d,"body"),12000),alt=optional(req,"altText",get(d,"altText"),1000),platforms=optional(req,"platforms",get(d,"platforms"),100);
         boolean changed=!title.equals(get(d,"title"))||!body.equals(get(d,"body"))||!alt.equals(get(d,"altText"))||!platforms.equals(get(d,"platforms"));
-        if(changed){d.put("title",title);d.put("body",body);d.put("altText",alt);d.put("platforms",platforms);d.put("version",longValue(d.get("version"),1)+1);d.put("updated",now());d.put("status","Draft");map("reviewStatus").put(id,"Changes requested");audit("DRAFT_UPDATED",id,"local-developer","Updated to version "+d.get("version")+"; prior approval invalidated");save();}
+        if(changed){d.put("title",title);d.put("body",body);d.put("altText",alt);d.put("platforms",platforms);d.put("version",longValue(d.get("version"),1)+1);d.put("updated",now());d.put("status","Draft");map("reviewStatus").put(id,"Changes requested");for(Map<String,Object> p:list("approvalRequests"))if(id.equals(get(p,"draftId"))&&"Pending".equals(get(p,"status"))){p.put("status","Superseded");p.put("resolvedAt",now());}audit("DRAFT_UPDATED",id,"local-developer","Updated to version "+d.get("version")+"; prior approval invalidated");save();}
         return d;
     }
     public synchronized Map<String,Object> validate(Map<String,Object> req){
@@ -95,7 +95,7 @@ public final class PostFlightService {
         Map<String,Object> d=draft(id);String decision=required(req,"decision",30);String reviewer=optional(req,"reviewer","Local demo reviewer",80);String comment=optional(req,"comment","",500);
         if(!List.of("Approved","Changes requested").contains(decision))throw new ApiError(400,"Unsupported review decision");
         if("Approved".equals(decision)){Map<String,Object> r=latestRun(id);if(r==null||!get(r,"policyVersion").equals(activePolicy())||!get(r,"contentHash").equals(digest(d)))throw new ApiError(409,"A current validation run is required before approval");if("BLOCKED".equals(get(r,"verdict")))throw new ApiError(409,"Blocking findings must be resolved before approval");}
-        map("reviewStatus").put(id,decision);d.put("status",decision);audit("REVIEW_"+decision.toUpperCase(Locale.ROOT).replace(' ','_'),id,reviewer,comment.isBlank()?"Review decision":comment);save();return doc("draftId",id,"decision",decision,"reviewer",reviewer,"at",now());
+        map("reviewStatus").put(id,decision);d.put("status",decision);for(Map<String,Object> p:list("approvalRequests"))if(id.equals(get(p,"draftId"))&&"Pending".equals(get(p,"status"))&&longValue(p.get("draftVersion"),-1)==longValue(d.get("version"),1)&&get(p,"contentHash").equals(digest(d))&&get(p,"policyVersion").equals(activePolicy())){p.put("status",decision);p.put("resolvedAt",now());}audit("REVIEW_"+decision.toUpperCase(Locale.ROOT).replace(' ','_'),id,reviewer,comment.isBlank()?"Review decision":comment);save();return doc("draftId",id,"decision",decision,"reviewer",reviewer,"at",now());
     }
     public synchronized Map<String,Object> issueRelease(Map<String,Object> req){
         String id=required(req,"draftId",100);Map<String,Object> d=draft(id),run=latestRun(id);
@@ -107,6 +107,82 @@ public final class PostFlightService {
         list("releasesIssued").add(0,certificate);audit("RELEASE_CERTIFICATE_ISSUED",id,"local-developer",releaseId);save();return certificate;
     }
     public synchronized Map<String,Object> verifyRelease(String id){for(Map<String,Object> r:list("releasesIssued"))if(id.equals(get(r,"id"))){String base=id+"|"+get(r,"draftId")+"|"+get(r,"contentHash")+"|"+get(r,"policyVersion")+"|"+get(r,"issuedAt");boolean genuine=MessageDigest.isEqual(hmac(get(state,"certificateSecret"),base).getBytes(StandardCharsets.UTF_8),get(r,"signature").getBytes(StandardCharsets.UTF_8));return doc("releaseId",id,"signatureValid",genuine,"historicalVersion",r.get("draftVersion"),"published",false,"meaning","Local demo HMAC verifies stored evidence; no external identity assurance or regulatory certification");}throw new ApiError(404,"Release certificate not found");}
+    /** Local single-operator requests; reviewer labels are not verified identities. */
+    public synchronized List<Map<String,Object>> approvalRequests(){return copy(list("approvalRequests"));}
+    public synchronized Map<String,Object> requestApproval(Map<String,Object> req){
+        String id=required(req,"draftId",100), reviewer=required(req,"reviewer",100);
+        String note=optional(req,"note","",500);
+        Map<String,Object> d=draft(id),run=latestRun(id);
+        long version=longValue(d.get("version"),1);
+        if(req.containsKey("expectedVersion")&&longValue(req.get("expectedVersion"),-1)!=version)
+            throw new ApiError(409,"Draft version changed; reload before requesting approval");
+        if(run==null||!activePolicy().equals(get(run,"policyVersion"))||!digest(d).equals(get(run,"contentHash")))
+            throw new ApiError(409,"Current draft must be validated against current policy before requesting approval");
+        if("BLOCKED".equals(get(run,"verdict")))
+            throw new ApiError(409,"Blocking findings must be resolved before requesting approval");
+        for(Map<String,Object> existing:list("approvalRequests"))
+            if(id.equals(get(existing,"draftId"))&&version==longValue(existing.get("draftVersion"),-1)
+                &&"Pending".equals(get(existing,"status")))
+                throw new ApiError(409,"An approval request is already pending for this draft version");
+        Map<String,Object> record=doc("id",nextId("PF-APP-"),"draftId",id,
+            "draftVersion",version,"contentHash",get(run,"contentHash"),"policyVersion",activePolicy(),
+            "validationRunId",get(run,"id"),"reviewer",reviewer,"note",note,
+            "status","Pending","requestedAt",now(),"resolvedAt","");
+        list("approvalRequests").add(0,record);
+        d.put("status","Pending review");map("reviewStatus").put(id,"Pending review");
+        audit("APPROVAL_REQUESTED",id,"local-developer",get(record,"id")+" v"+version+" for "+reviewer);
+        save();
+        return obj(Json.parse(Json.stringify(record)));
+    }
+    /** Publishes an immutable local governance record for already-active demo rules.
+        It does not push a policy to any remote enforcement engine. */
+    public synchronized List<Map<String,Object>> policyPublications(){return copy(list("policyPublications"));}
+    public synchronized Map<String,Object> publishPolicy(Map<String,Object> req){
+        String expected=required(req,"expectedVersion",100);
+        if(!expected.equals(activePolicy()))throw new ApiError(409,"Policy changed; reload before publishing");
+        String summary=required(req,"summary",500), reviewedBy=required(req,"reviewedBy",100);
+        String approval=required(req,"approval",20);
+        if(!"APPROVED".equals(approval))throw new ApiError(400,"Explicit APPROVED confirmation required");
+        for(Map<String,Object> entry:list("policyPublications"))
+            if(expected.equals(get(entry,"version")))
+                throw new ApiError(409,"This policy version already has a publication record");
+        List<Map<String,Object>> snapshot=copy(list("customRules"));
+        String contentHash=sha256(Json.stringify(snapshot)+"|"+expected);
+        Map<String,Object> record=doc("id",nextId("PF-POL-"),"version",expected,
+            "summary",summary,"reviewedBy",reviewedBy,"publishedAt",now(),
+            "customRules",snapshot,"contentHash",contentHash,"status","PUBLISHED_LOCAL_RECORD",
+            "externalDeployment",false);
+        list("policyPublications").add(0,record);
+        audit("POLICY_SNAPSHOT_PUBLISHED",get(record,"id"),"local-developer",expected+" | "+summary);
+        save();
+        return obj(Json.parse(Json.stringify(record)));
+    }
+    /** Editable local workflow step settings; never mutates a running workflow. */
+    public synchronized Map<String,Object> workflowStepSettings(){return obj(Json.parse(Json.stringify(map("workflowSteps"))));}
+    public synchronized List<Map<String,Object>> workflowRevisions(){return copy(list("workflowRevisions"));}
+    public synchronized Map<String,Object> updateWorkflowStep(String name,Map<String,Object> req){
+        List<String> permitted=List.of("Content validation","Risk classification","Legal review","Brand review","Release approval");
+        if(!permitted.contains(name))throw new ApiError(404,"Unknown workflow step");
+        String owner=required(req,"owner",100),failureAction=required(req,"onFailure",40);
+        if(!List.of("Request changes","Escalate","Block release").contains(failureAction))
+            throw new ApiError(400,"Unsupported failure action");
+        long sla=longValue(req.get("slaHours"),-1);
+        if(sla<1||sla>168)throw new ApiError(400,"SLA must be 1–168 hours");
+        String rationale=required(req,"reason",500);
+        Map<String,Object> previous=map("workflowSteps").containsKey(name)?obj(map("workflowSteps").get(name)):new LinkedHashMap<>();
+        long rev=longValue(previous.get("revision"),0);
+        if(req.containsKey("expectedRevision")&&longValue(req.get("expectedRevision"),-1)!=rev)
+            throw new ApiError(409,"Workflow step changed; reload before editing");
+        Map<String,Object> next=doc("name",name,"owner",owner,"onFailure",failureAction,
+            "slaHours",sla,"revision",rev+1,"updatedAt",now());
+        map("workflowSteps").put(name,next);
+        Map<String,Object> history=doc("id",nextId("PF-WREV-"),"step",name,"revision",rev+1,
+            "reason",rationale,"at",now(),"previous",previous,"current",new LinkedHashMap<>(next));
+        list("workflowRevisions").add(0,history);
+        audit("WORKFLOW_STEP_REVISED",name,"local-developer","rev "+(rev+1)+" | "+rationale);
+        save();
+        return obj(Json.parse(Json.stringify(next)));
+    }
     public synchronized Map<String,Object> getPolicies(){return doc("version",activePolicy(),"baseVersion",PreflightRules.POLICY_VERSION,"customRules",copy(list("customRules")),"activeCustomRules",list("customRules").size());}
     public synchronized Map<String,Object> createPolicyRule(Map<String,Object> req){
         String phrase=required(req,"phrase",80),title=required(req,"title",160),severity=optional(req,"severity","High",12);

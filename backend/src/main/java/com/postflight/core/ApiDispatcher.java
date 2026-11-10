@@ -35,6 +35,13 @@ public final class ApiDispatcher {
         else if(method.equals("PUT")&&seg.length==4&&seg[2].equals("drafts"))response=service.updateDraft(seg[3],payload);
         else if(method.equals("POST")&&path.equals("/api/validations"))return out(201,service.validate(payload));
         else if(method.equals("GET")&&path.equals("/api/validations"))response=service.validations();
+        else if(method.equals("GET")&&path.equals("/api/approvals/requests"))response=service.approvalRequests();
+        else if(method.equals("POST")&&path.equals("/api/approvals/requests"))return out(201,service.requestApproval(payload));
+        else if(method.equals("GET")&&path.equals("/api/policies/publications"))response=service.policyPublications();
+        else if(method.equals("POST")&&path.equals("/api/policies/publications"))return out(201,service.publishPolicy(payload));
+        else if(method.equals("GET")&&path.equals("/api/workflows/steps"))response=service.workflowStepSettings();
+        else if(method.equals("GET")&&path.equals("/api/workflows/revisions"))response=service.workflowRevisions();
+        else if(method.equals("PUT")&&seg.length==5&&seg[2].equals("workflows")&&seg[3].equals("steps"))response=service.updateWorkflowStep(java.net.URLDecoder.decode(seg[4],java.nio.charset.StandardCharsets.UTF_8),payload);
         else if(method.equals("POST")&&seg.length==5&&seg[2].equals("reviews")&&seg[4].equals("decision"))response=service.review(seg[3],payload);
         else if(method.equals("POST")&&path.equals("/api/releases"))return out(201,service.issueRelease(payload));
         else if(method.equals("GET")&&path.equals("/api/releases"))response=service.releases();
