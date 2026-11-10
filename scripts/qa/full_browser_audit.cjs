@@ -102,6 +102,29 @@ async function primaryRouteSweep(p,route) {
           !initial.some(prev=>metadataSignature(prev)===metadataSignature(x)));
         for(const item of fresh.slice(0,12)){
           result.routeInventory[route].nested.push(item);
+          if(!item.attrs[0] || !item.attrs[0][1])continue;
+          const [childKey,childValue]=item.attrs[0];
+          if(childKey==='data-action' && dangerous.has(childValue)){
+            result.routeInventory[route].notExercised.push({control:item,reason:'Nested mutation; covered by isolated backend tests'});
+            continue;
+          }
+          try {
+            // Restore the parent state before clicking each newly discovered nested button.
+            await go(p,route);
+            const parent=p.locator('button['+key+'="'+value.replace(/"/g,'\\"')+'"]').first();
+            if(!await parent.count() || !await parent.isVisible())continue;
+            await parent.click({timeout:3000});
+            const child=p.locator('button['+childKey+'="'+childValue.replace(/"/g,'\\"')+'"]').first();
+            if(!await child.count() || !await child.isVisible())continue;
+            await child.click({timeout:3000});
+            must(await p.locator('main').count()>0,'Main content disappeared after nested action');
+            const current=await p.locator('body').innerText();
+            if(current.includes('This action is not implemented in local-development mode')){
+              result.routeInventory[route].unimplemented.push(item);
+            }else{
+              result.routeInventory[route].clicked.push({control:item,method:'nested browser click',parent:signature});
+            }
+          }catch(err){throw new Error('Nested '+route+' '+childKey+'='+childValue+': '+(err.message||err));}
         }
       }
     } catch(err){
@@ -111,6 +134,22 @@ async function primaryRouteSweep(p,route) {
   if(ordered.length>capped.length)result.routeInventory[route].notExercised.push({
     reason:'Per-page 90-button safety cap',count:ordered.length-capped.length
   });
+  // Inventory all hyperlinks. External links are validated structurally, but never opened.
+  await go(p,route);
+  const anchors=await p.locator('main a,header a,aside a').evaluateAll(nodes=>
+    nodes.map(a=>({href:a.getAttribute('href')||'',text:(a.textContent||'').trim().slice(0,100),
+      rel:a.getAttribute('rel')||'',target:a.getAttribute('target')||''})));
+  result.routeInventory[route].links=anchors;
+  for(const item of anchors){
+    must(item.href.length>0,'Empty hyperlink on '+route+': '+item.text);
+    if(item.target==='_blank' && item.href.startsWith('http')){
+      if(!/noopener/.test(item.rel))result.warnings.push('External target=_blank lacking rel=noopener: '+route+' '+item.href);
+    }
+  }
+  const unnamed=await p.locator('main button,header button,aside button').evaluateAll(nodes=>
+    nodes.filter(e=>(e.offsetWidth||e.offsetHeight||e.getClientRects().length) &&
+      !e.disabled && !(e.innerText||'').trim() && !e.getAttribute('aria-label') && !e.getAttribute('title')).length);
+  if(unnamed)result.warnings.push('Accessibility: '+route+' has '+unnamed+' unnamed enabled button(s)');
   // Persist a visual screenshot for every first-level route.
   await go(p,route);
   await p.screenshot({path:path.join(output,'desktop-'+route+'.png'),fullPage:false});
