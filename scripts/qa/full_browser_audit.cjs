@@ -256,6 +256,24 @@ async function deepProductChecks(p){
       'Incident escalation not persisted in Java state');
   });
 
+  await check('Operations: user-entered HTML is rendered as safe text',async()=>{
+    const title='<img src=x onerror=alert(1)> QA harmless string';
+    const owner='<svg onload=alert(1)> QA test owner';
+    const created=await context.request.post(editBase+'/api/incidents',{
+      data:{title,owner,severity:'Medium',description:'Untrusted text must be escaped'},
+      failOnStatusCode:false
+    });
+    must(created.status()===201,'Unable to create XSS test incident');
+    const record=await created.json();
+    await go(p,'incidents',editBase);
+    const row=p.locator('tr[data-incident="'+record.id+'"]');
+    await row.waitFor({state:'visible'});
+    must((await row.innerText()).includes('<img src=x'),'Title was not displayed as text');
+    must(await row.locator('img').count()===0,'HTML image tag was injected into incident table');
+    await row.click();
+    must(await p.locator('main [onload], main [onerror]').count()===0,'Active HTML attribute injected');
+    must((await p.locator('main').innerText()).includes('<svg onload=alert(1)>'),'Owner not escaped as visible text');
+  });
   await check('Preflight: high-risk content blocked',async()=>{
     await go(p,'playground');
     await p.locator('[data-pf-sample="0"]').click();
