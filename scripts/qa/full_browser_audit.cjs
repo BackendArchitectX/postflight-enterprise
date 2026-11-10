@@ -488,6 +488,229 @@ async function deepProductChecks(p){
     );
   });
 
+  await check('Governance: approval UI enforces gates and invalidates stale approval',async()=>{
+    const create=async(title,body,altText='')=>{
+      const r=await context.request.post(editBase+'/api/drafts',{
+        data:{title,body,platforms:'LinkedIn',altText},
+        failOnStatusCode:false
+      });
+      must(r.status()===201,'Could not create disposable draft');
+      return r.json();
+    };
+
+    const attempt=async id=>{
+      await go(p,'reviews',editBase);
+      const row=p.locator('[data-review-select="'+id+'"]');
+      await row.waitFor({state:'visible',timeout:7000});
+      await row.click();
+
+      await p.getByText(
+        'Actions below save a local server decision for '+id,
+        {exact:false}
+      ).waitFor();
+
+      const endpoint=editBase+'/api/reviews/'+encodeURIComponent(id)+'/decision';
+      const [response]=await Promise.all([
+        p.waitForResponse(r=>
+          r.request().method()==='POST'&&r.url()===endpoint,
+          {timeout:12000}
+        ),
+        p.locator('[data-action="approveReview"]').click()
+      ]);
+      return response;
+    };
+
+    const unvalidated=await create(
+      'QA draft without validation',
+      'A general financial education update.'
+    );
+
+    const noValidation=await attempt(unvalidated.id);
+    must(noValidation.status()===409,
+      'Unvalidated draft was incorrectly approved');
+
+    const blocked=await create(
+      'QA blocked claim',
+      'Guaranteed returns with no risk. Guaranteed profits.'
+    );
+
+    const blockedRun=await context.request.post(
+      editBase+'/api/validations',{
+        data:{draftId:blocked.id,platform:'LinkedIn',altText:''}
+      }
+    );
+
+    must(blockedRun.status()===201,'Blocked-content validation failed');
+    must((await blockedRun.json()).verdict==='BLOCKED',
+      'Unsafe sample did not trigger blocking findings');
+
+    const blockedApproval=await attempt(blocked.id);
+    must(blockedApproval.status()===409,
+      'Blocked content was incorrectly approved');
+
+    const good=await create(
+      'QA compliant approval candidate',
+      'We support your financial journey. Investing involves risk and outcomes vary.',
+      'A thoughtful financial wellness illustration.'
+    );
+
+    const goodRun=await context.request.post(
+      editBase+'/api/validations',{
+        data:{draftId:good.id,platform:'LinkedIn',altText:'A thoughtful financial wellness illustration.'}
+      }
+    );
+
+    must(goodRun.status()===201,'Clean validation failed');
+    must((await goodRun.json()).verdict==='PASS',
+      'Compliant sample unexpectedly blocked');
+
+    const approved=await attempt(good.id);
+    must(approved.status()===200,
+      'Approved UI action rejected');
+
+    must((await approved.json()).decision==='Approved',
+      'Incorrect approval decision returned');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Server review decision: Approved'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const snapshotResponse=await context.request.get(
+      editBase+'/api/bootstrap'
+    );
+    must(snapshotResponse.status()===200,'Bootstrap verification failed');
+
+    const snapshot=await snapshotResponse.json();
+    const stored=snapshot.drafts.find(d=>d.id===good.id);
+
+    must(stored?.status==='Approved',
+      'Approved status not persisted');
+    must(snapshot.reviewStatus[good.id]==='Approved',
+      'Review decision not persisted');
+    must(snapshot.reviewStatus[blocked.id]!=='Approved',
+      'Blocked draft incorrectly approved');
+    must(snapshot.reviewStatus[unvalidated.id]!=='Approved',
+      'Unvalidated draft incorrectly approved');
+
+    await go(p,'reviews',editBase);
+    await p.locator('[data-review-tab="completed"]').click();
+
+    const approvedRow=p.locator(
+      '[data-review-select="'+good.id+'"]'
+    );
+    await approvedRow.waitFor({state:'visible'});
+    must((await approvedRow.innerText()).includes('Approved'),
+      'Approval disappeared after reload');
+
+    const editResponse=await context.request.put(
+      editBase+'/api/drafts/'+encodeURIComponent(good.id),{
+        data:{
+          body:'Content updated after approval. The prior approval must expire.'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(editResponse.status()===200,'Post-approval edit failed');
+
+    const modified=await editResponse.json();
+    must(modified.version>stored.version,
+      'Draft version did not advance after editing');
+
+    const latest=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    must(latest.reviewStatus[good.id]==='Changes requested',
+      'Previous approval survived a content change');
+
+    await go(p,'reviews',editBase);
+    await p.locator('[data-review-tab="changes"]').click();
+    await p.locator(
+      '[data-review-select="'+good.id+'"]'
+    ).waitFor({state:'visible'});
+  });
+
+  await check('Governance: request changes persists with audit evidence',async()=>{
+    const created=await context.request.post(
+      editBase+'/api/drafts',{
+        data:{
+          title:'QA change request candidate',
+          body:'Draft requiring an editorial revision.',
+          platforms:'LinkedIn'
+        },
+        failOnStatusCode:false
+      }
+    );
+
+    must(created.status()===201,'Draft creation failed');
+    const draft=await created.json();
+
+    await go(p,'reviews',editBase);
+
+    const row=p.locator('[data-review-select="'+draft.id+'"]');
+    await row.waitFor({state:'visible'});
+    await row.click();
+
+    await p.getByText(
+      'Actions below save a local server decision for '+draft.id,
+      {exact:false}
+    ).waitFor();
+
+    const endpoint=editBase+'/api/reviews/'+encodeURIComponent(draft.id)+'/decision';
+
+    const [response]=await Promise.all([
+      p.waitForResponse(r=>
+        r.request().method()==='POST'&&r.url()===endpoint,
+        {timeout:12000}
+      ),
+      p.locator('[data-action="requestChanges"]').click()
+    ]);
+
+    must(response.status()===200,'Request Changes action failed');
+    must((await response.json()).decision==='Changes requested',
+      'Incorrect decision returned');
+
+    await p.locator('#toasts .toast')
+      .filter({hasText:'Server review decision: Changes requested'})
+      .waitFor({state:'visible',timeout:10000});
+
+    const bootstrap=await (
+      await context.request.get(editBase+'/api/bootstrap')
+    ).json();
+
+    const saved=bootstrap.drafts.find(d=>d.id===draft.id);
+    must(saved?.status==='Changes requested',
+      'Change request not persisted');
+
+    must(bootstrap.reviewStatus[draft.id]==='Changes requested',
+      'Review status mismatch');
+
+    const auditResponse=await context.request.get(
+      editBase+'/api/audit'
+    );
+    must(auditResponse.status()===200,'Audit verification failed');
+
+    const audit=await auditResponse.json();
+    must(audit.chainValid===true,'Audit hash chain invalid');
+
+    must(audit.events.some(e=>
+      e.action==='REVIEW_CHANGES_REQUESTED' &&
+      e.entityId===draft.id
+    ),'Change request missing from the audit trail');
+
+    await go(p,'reviews',editBase);
+    await p.locator('[data-review-tab="changes"]').click();
+
+    const persisted=p.locator(
+      '[data-review-select="'+draft.id+'"]'
+    );
+
+    await persisted.waitFor({state:'visible'});
+    must((await persisted.innerText()).includes('Changes requested'),
+      'Change request disappeared after reload');
+  });
+
   await check('Governance: approval request persists and appears in Review Center',async()=>{
     const created=await context.request.post(editBase+'/api/drafts',{data:{
       title:'QA browser governance request',body:'Investments involve risk. This is a sample campaign.',
@@ -758,6 +981,44 @@ async function deepProductChecks(p){
       });
     }
 
+    const approvalUiName =
+      'Governance: approval UI enforces gates and invalidates stale approval';
+    const changesUiName =
+      'Governance: request changes persists with audit evidence';
+
+    const approvalPassed=result.checks.some(
+      x=>x.name===approvalUiName&&x.status==='PASS'
+    );
+    const changesPassed=result.checks.some(
+      x=>x.name===changesUiName&&x.status==='PASS'
+    );
+
+    if(approvalPassed||changesPassed){
+      const inventory=result.routeInventory.reviews;
+      inventory.coveredByDedicatedTests=
+        inventory.coveredByDedicatedTests||[];
+
+      inventory.notExercised=inventory.notExercised.filter(entry=>{
+        if(entry.control?.key!=='data-action')return true;
+
+        const action=entry.control.value;
+        const evidence=
+          action==='approveReview'&&approvalPassed
+            ?approvalUiName
+            :action==='requestChanges'&&changesPassed
+              ?changesUiName
+              :null;
+
+        if(!evidence)return true;
+
+        inventory.coveredByDedicatedTests.push({
+          control:entry.control,
+          method:'browser decision + backend verification + reload',
+          evidence
+        });
+        return false;
+      });
+    }
    const unimplemented=Object.values(result.routeInventory).flatMap(x=>x.unimplemented||[]);
    const skippedControls=Object.values(result.routeInventory).flatMap(x=>x.notExercised||[]);
    result.coverage={
