@@ -1,0 +1,135 @@
+# Privileged observer: never check out triggering workflow code or artifacts.
+# All data from the event is treated as untrusted metadata, never executable code.
+name: PostFlight CI Guardian
+
+on:
+  workflow_run:
+    workflows:
+      - PostFlight Complete QA
+      - PostFlight Product Workflows
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+concurrency:
+  group: ci-guardian-${{ github.event.workflow_run.name || 'manual' }}-${{ github.event.workflow_run.head_branch || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  triage-and-recover:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Open tracked incident and retry a failed run once
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const run=context.payload.workflow_run;
+            if(!run){core.info('No completed workflow to triage.');return;}
+            const {owner,repo}=context.repo;
+            if(run.event==='pull_request'&&run.head_repository &&
+                run.head_repository.full_name!==owner+'/'+repo) {
+              core.warning('Forked PR: privileged incident creation and retry are disabled.');
+              return;
+            }
+            const branch=String(run.head_branch||'unknown').replace(/[\r\n]/g,' ').slice(0,90);
+            const workflow=String(run.name||'unnamed').replace(/[\r\n]/g,' ').slice(0,80);
+            const title='[PostFlight CI] '+workflow+' ['+branch+']';
+            const marker='<!-- postflight-ci-guardian -->';
+            const sha=String(run.head_sha||'').slice(0,40);
+            const attempt=Number(run.run_attempt||1);
+            const url=run.html_url;
+            const state=String(run.conclusion||'unknown');
+            const issues=await github.paginate(github.rest.issues.listForRepo,{
+              owner,repo,state:'open',per_page:100
+            });
+            const existing=issues.find(i=>!i.pull_request&&i.title===title&&
+              String(i.body||'').includes(marker));
+
+            if(state==='success'){
+              if(existing){
+                await github.rest.issues.createComment({
+                  owner,repo,issue_number:existing.number,
+                  body:'Recovered: [workflow run]('+url+') at commit '+sha+
+                    ' (attempt '+attempt+'). '+(attempt>1?'Potential flaky test or runner.':'Healthy follow-up.')
+                });
+                await github.rest.issues.update({
+                  owner,repo,issue_number:existing.number,state:'closed',state_reason:'completed'
+                });
+              }
+              core.info('Workflow passed.');
+              return;
+            }
+            if(['cancelled','skipped','neutral'].includes(state)){
+              core.info('Nonfailure completion: '+state);
+              return;
+            }
+            const jobs=await github.paginate(github.rest.actions.listJobsForWorkflowRun,{
+              owner,repo,run_id:run.id,filter:'latest',per_page:100
+            });
+            const failed=jobs.filter(j=>['failure','timed_out','action_required'].includes(j.conclusion));
+            const steps=failed.flatMap(j=>(j.steps||[])
+              .filter(s=>['failure','timed_out'].includes(s.conclusion))
+              .map(s=>String(j.name||'job')+' / '+String(s.name||'step')));
+            const environment=steps.some(s=>/set up|setup|chromium|install|download|checkout|artifact/i.test(s));
+            const details=(steps.length?steps:failed.map(j=>j.name+' ('+j.conclusion+')'))
+              .slice(0,12).map(s=>'- '+s.replace(/[\r\n]/g,' ').slice(0,160));
+            const retry=attempt===1&&['failure','timed_out'].includes(state);
+            const body=[
+              marker,
+              '## Automated CI incident: '+workflow,
+              'Conclusion: **'+state+'**',
+              '',
+              '- [Logs and QA artifacts]('+url+')',
+              '- Branch: '+branch,
+              '- Commit: '+sha,
+              '- Attempt: '+attempt+' / 2',
+              '- Suspected area: '+(environment?'runner/dependencies':'regression or unknown'),
+              '',
+              '### Failed jobs or steps',...details,'',
+              '### Recovery',
+              retry?'One bounded automatic retry will be requested.':
+                'Retries exhausted or not retryable. Human-reviewed code fix required.',
+              '',
+              'The guardian cannot fix arbitrary source-code defects.',
+              'It never edits source, weakens security, merges PRs or deploys.',
+              'Do not paste access tokens, secrets or private records into a public issue.'
+            ].join('\n');
+            let issueNumber;
+            try{
+              if(existing){
+                await github.rest.issues.update({owner,repo,issue_number:existing.number,body});
+                issueNumber=existing.number;
+              }else{
+                const created=await github.rest.issues.create({owner,repo,title,body});
+                issueNumber=created.data.number;
+              }
+              core.warning('Failure recorded in issue #'+issueNumber);
+            }catch(error){
+              core.error('Incident reporting failed: '+error.message);
+            }
+            if(retry){
+              try{
+                await github.rest.actions.reRunFailedJobs({owner,repo,run_id:run.id});
+                core.notice('One retry requested: '+url);
+                if(issueNumber)await github.rest.issues.createComment({
+                  owner,repo,issue_number:issueNumber,
+                  body:'One bounded automatic retry has started: [view run]('+url+
+                    '). A repeated failure needs a reviewed repair PR.'
+                });
+              }catch(error){
+                core.setFailed('Retry failed to start: '+error.message);
+                if(issueNumber)await github.rest.issues.createComment({
+                  owner,repo,issue_number:issueNumber,
+                  body:'Automatic retry could not start. Investigate [the failure]('+url+').'
+                });
+              }
+            }else{
+              core.setFailed('CI remains failed after at most one retry: '+url);
+            }

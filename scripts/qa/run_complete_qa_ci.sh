@@ -9,6 +9,9 @@ node --check web/assets/app.js
 node --check web/assets/experience.js
 node --check web/assets/zernio-visitor.js
 node --check scripts/qa/full_browser_audit.cjs
+python3 scripts/qa/check_scheduler_security.py
+node --check web/assets/operational-workflows.js
+node --check web/assets/governance-workflows.js
 
 temp_root="$(mktemp -d)"
 demo_pid=""
@@ -44,7 +47,7 @@ node scripts/test_frontend_state.cjs http://127.0.0.1:10004
 
 deps="$temp_root/npm"
 mkdir -p "$deps"
-npm install --prefix "$deps" --no-audit --no-fund --no-save playwright
+npm install --prefix "$deps" --no-audit --no-fund --no-save playwright@1.65.0
 export NODE_PATH="$deps/node_modules"
 export PF_QA_DEMO="http://127.0.0.1:10003"
 export PF_QA_EDIT="http://127.0.0.1:10004"
