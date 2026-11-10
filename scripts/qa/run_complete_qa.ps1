@@ -114,7 +114,7 @@ try {
     $summary += "PASS isolated editable server"
 
     Write-Host "[4/7] Run backend lifecycle, policy, media, security and frontend-state contracts"
-    foreach($test in @("scripts/test_integration.py","scripts/test_extensions.py","scripts/test_security.py","scripts/test_operational_workflows.py")){
+    foreach($test in @("scripts/test_integration.py","scripts/test_extensions.py","scripts/test_security.py","scripts/test_operational_workflows.py","scripts/test_governance_workflows.py")){
         & $python.Source @pythonArgs $test $editBase
         Assert-Exit "$test"
         $summary += "PASS $test"
