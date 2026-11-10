@@ -69,9 +69,9 @@ This guide tells you exactly **where to click**, **what to enter** and **what ha
 1. Click **Workspaces**.
 2. Browse the sample companies and projects.
 3. Use the search box to find a sample workspace.
-4. Notice that **New workspace** and **Invite member** are not working secure team features on the current `main` branch.
+4. **New workspace** and **Invite member** require private Clerk sign-in; the public Render demo stays read-only.
 
-**Result:** This page shows examples only. Real sign-in, new team workspaces and invitations are being developed in [PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5).
+**Result:** Sample cards are illustrative. Real secure workspaces use a separate Clerk-authenticated store. See [Clerk setup](CLERK_SETUP.md).
 
 ### 7. Media Intelligence — Add a picture
 
@@ -187,7 +187,7 @@ This guide tells you exactly **where to click**, **what to enter** and **what ha
 
 1. Click **Administration**.
 2. Look at the example members, roles and settings.
-3. Use **Invite member** only when real authentication is implemented; it does not send email on `main`.
+3. Use **Invite member** only on a private Clerk-configured runtime. Invitations are token-based and do not send email.
 4. If you truly want to remove your local demo changes, choose **Reset demo data**.
 5. Read the confirmation carefully before accepting.
 
@@ -250,22 +250,20 @@ This guide tells you exactly **where to click**, **what to enter** and **what ha
 
 For exact times, retry limits and troubleshooting, read the [daily testing and failure recovery guide](CI_SELF_HEALING.md).
 
-### 20. Secure teams and Cognito login (not active yet)
+### 20. Secure teams with Clerk sign-in (private test only)
 
-These instructions describe the **planned private test setup** in [PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5). **Do not use them to turn on the public site.**
+The secure workspace foundation from [PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5) is merged. The replacement Clerk login is explained in [Clerk setup](CLERK_SETUP.md).
 
-1. Create a private Amazon Cognito user pool with at least two test users.
-2. Configure a public app client using authorization code + PKCE (no client secret).
-3. Configure the exact callback address and Cognito hosted login domain for a **private test app**.
-4. Set the server's Cognito pool ID, app client ID and hosted domain using the private environment configuration in [Phase 3 setup](https://github.com/BackendArchitectX/postflight-enterprise/blob/feat/auth-workspaces-rbac/docs/PHASE3_WORKSPACES.md).
-5. Start the private test app and sign in with Cognito.
-6. Create a workspace as **OWNER**.
-7. Invite a second test user's Cognito subject ID and choose a role.
-8. Give that user the invitation ID and one-time token securely. No invitation email is sent.
-9. Sign in as the second user and accept the invitation.
-10. Verify that people from other workspaces cannot read these records.
+1. Create a Clerk **development** application and copy only the `pk_test_` publishable key.
+2. Set `POSTFLIGHT_CLERK_PUBLISHABLE_KEY` locally in PowerShell, then start `.\\run.ps1`.
+3. Open **Workspaces → Secure workspaces → Sign in with Clerk**.
+4. Create a workspace as OWNER.
+5. In a second browser profile, sign in with a second account and copy its `user_...` ID.
+6. As the owner, invite that exact Clerk user ID with VIEWER or REVIEWER permission.
+7. Give the intended user the one-time invitation token and ID privately.
+8. As the second user, use **Join invitation** and verify the server enforces role boundaries.
 
-**Result:** A private authentication test, **not** a production multi-user launch. Real Cognito integration and tenant-wide isolation still need review and verification.
+**Result:** A private proof-of-concept. It does **not** turn old demo drafts into secure tenant data, email invitations or enable publishing.
 
 ## D. Important safety reminders
 

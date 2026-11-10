@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed HTTP security tests for unconfigured and public Cognito workspaces."""
+"""Fail-closed HTTP security tests for unconfigured and public Clerk workspaces."""
 import json
 import sys
 import urllib.request
@@ -18,7 +18,7 @@ def call(base,method,path,body=None):
     except urllib.error.HTTPError as error:return error.code,json.loads(error.read().decode())
 
 status,cfg=call(PUBLIC,'GET','/api/secure/config')
-assert status==200 and cfg['enabled'] is False and cfg['publicReadOnly'] is True, (status,cfg)
+assert status==200 and cfg['enabled'] is False and cfg['publicReadOnly'] is True and cfg['provider']=='Clerk', (status,cfg)
 status,body=call(PUBLIC,'GET','/api/secure/workspaces')
 assert status==503, (status,body)
 status,body=call(PUBLIC,'POST','/api/secure/workspaces',{'name':'Should not create'})

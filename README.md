@@ -48,7 +48,7 @@ No API key, Docker, Maven or cloud account is needed to **run the local app**. D
 | Page | Easy steps |
 | --- | --- |
 | **Mission Control** | Open the dashboard → explore example numbers → start a validation. |
-| **Workspaces** | Explore sample company cards. Real team accounts are **not available on main**. |
+| **Workspaces** | Sample cards are public examples. Private team spaces require configured Clerk sign-in. |
 | **Media Intelligence** | Click **Upload asset** → choose a PNG/JPEG (700 KB maximum) → add image description → upload. |
 | **Policy Studio** | Click **Add rule** → enter a rule name and blocked phrase → save → check a draft again. |
 | **Policy versions** | Click **Publish version** → enter the reviewer, reason and `APPROVED` → save a **local snapshot**. |
@@ -81,9 +81,9 @@ The test script creates temporary test data, checks the Java API, security rules
 
 **Works in the current `main` branch:** local drafts, checks, custom rules, review decisions, local approval requests, policy snapshots, workflow previews and step edits, image uploads, incidents, proof records, a read-only public demo and test scripts.
 
-**Not ready for real users:** login, secure shared team workspaces, sending invitation emails, real publishing or scheduling, and production data storage.
+**Not ready for a production launch:** verified real Clerk sign-in, secure migration of legacy content, invitation emails, real publishing and production-grade storage. You can test Clerk user sessions and isolated workspace RBAC privately.
 
-- **[PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5):** work in progress — Cognito login, secure workspaces and roles. Real login is not tested with an AWS user pool yet.
+- **Private sign-in:** [PR #5](https://github.com/BackendArchitectX/postflight-enterprise/pull/5) merged the initial Cognito foundation. This branch replaces it with Clerk. See the [simple Clerk setup](docs/CLERK_SETUP.md). Live Clerk accounts have **not** yet been verified.
 - **Scheduled CI ([merged PR #6](https://github.com/BackendArchitectX/postflight-enterprise/pull/6)):** scheduled checks, bounded retries and issue reporting are installed. Their real-world trigger/recovery behavior still needs a controlled live test.
 - **Real Zernio data:** possible read-only inspection using a restricted key, but live checks against a connected social account have not been verified.
 
@@ -92,6 +92,7 @@ The test script creates temporary test data, checks the Java API, security rules
 ## 6. More help
 
 - **[Every workflow, explained simply](docs/WORKFLOW_GUIDE.md)**
+- [Private Clerk sign-in: Windows guide](docs/CLERK_SETUP.md)
 - [Daily GitHub testing and failure recovery](docs/CI_SELF_HEALING.md)
 - [How it is built](docs/ARCHITECTURE.md) · [API details](docs/API.md) · [Safety notes](docs/SECURITY.md)
 - [Figma design](https://www.figma.com/design/vj7eawzLm6VzDWtF2niFdC)

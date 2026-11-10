@@ -30,9 +30,9 @@ for mode in demo edit; do
   cp docs/seed.json "$temp_root/$mode/docs/seed.json"
   cp -R web "$temp_root/$mode/web"
 done
-POSTFLIGHT_PUBLIC_DEMO=true PORT=10003 java --add-modules jdk.httpserver -Dpostflight.root="$temp_root/demo" -cp build/qa-classes com.postflight.local.Main 10003 > qa-reports/ci-complete/demo.log 2>&1 &
+POSTFLIGHT_CLERK_PUBLISHABLE_KEY="" POSTFLIGHT_PRIVATE_PROXY="" POSTFLIGHT_PUBLIC_DEMO=true PORT=10003 java --add-modules jdk.httpserver -Dpostflight.root="$temp_root/demo" -cp build/qa-classes com.postflight.local.Main 10003 > qa-reports/ci-complete/demo.log 2>&1 &
 demo_pid=$!
-POSTFLIGHT_PUBLIC_DEMO=false PORT=10004 java --add-modules jdk.httpserver -Dpostflight.root="$temp_root/edit" -cp build/qa-classes com.postflight.local.Main 10004 > qa-reports/ci-complete/edit.log 2>&1 &
+POSTFLIGHT_CLERK_PUBLISHABLE_KEY="" POSTFLIGHT_PRIVATE_PROXY="" POSTFLIGHT_PUBLIC_DEMO=false PORT=10004 java --add-modules jdk.httpserver -Dpostflight.root="$temp_root/edit" -cp build/qa-classes com.postflight.local.Main 10004 > qa-reports/ci-complete/edit.log 2>&1 &
 edit_pid=$!
 for port in 10003 10004; do
   for i in $(seq 1 50); do

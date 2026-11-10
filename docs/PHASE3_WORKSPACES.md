@@ -1,3 +1,7 @@
+# Historical Phase 3: Cognito prototype (superseded)
+
+> This is an archived description of the original Cognito implementation. The current migration to Clerk is documented in [Clerk setup](CLERK_SETUP.md). Do not follow these old Cognito configuration steps on the new branch.
+
 # Phase 3: authenticated workspace foundation (private alpha)
 
 This branch adds a **separate, Cognito-authenticated workspace domain** to the existing Java 17 local server. It does **not** convert the shared PostFlight demo drafts, reviews, rules, incidents or social accounts into secure multi-tenant resources. No real user data should be placed in those legacy APIs.
