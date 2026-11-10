@@ -1,0 +1,25 @@
+name: PostFlight Product Workflows
+on:
+  push:
+    branches: [main, feat/zernio-visitor-readonly]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  java17-product-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile and test stateless product workflows
+        run: bash scripts/ci_product_check.sh

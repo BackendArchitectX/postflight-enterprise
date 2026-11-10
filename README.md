@@ -1,5 +1,41 @@
 # PostFlight Enterprise — Local Working Application
 
+## New: Content Preflight Lab and Zernio Live Delivery Monitor (feature branch)
+
+A working, privacy-conscious demonstration now includes **two real pages** in the PostFlight navigation:
+
+- **Try PostFlight:** anonymous Java 17 validation for arbitrary user-supplied copy via `POST /api/demo/preflight`. The server computes financial-policy and platform checks, returns explainable rule IDs, severity, recommendations, a score and SHA-256 version fingerprint. Requests are checked in memory and **not saved**. A release checkpoint is only a **client-side simulation**, never a legal approval, official compliance certification or actual publication.
+- **Zernio Live Monitor:** without a key, visitors see an explicitly labeled **synthetic publishing lifecycle**. With their **own restricted, read-only, profile-scoped key**, they can request actual connected-account health via Zernio `GET /v1/accounts/health` and recent post statuses via Zernio `GET /v1/posts?limit=10`. This is an on-demand snapshot with optional 60-second polling while the tab is visible—not a streaming webhook feed.
+
+**No live publishing, scheduling, OAuth onboarding or user-account modification is exposed.** Keys are transiently sent over HTTPS through the PostFlight hosting provider to Zernio and kept in the browser tab's RAM only if a visitor requests repeated refreshes; they are **not stored in PostFlight files, persistent state or browser localStorage**. This does not prevent handling by hosting/network systems or Zernio. The real Zernio response has not yet been verified against a connected social account, because the current connected Zernio workspace has no social accounts.
+
+### Try it locally on Windows
+
+```powershell
+git switch feat/zernio-visitor-readonly
+git pull --ff-only origin feat/zernio-visitor-readonly
+.\scripts\verify_product_workflows.ps1
+```
+
+The script builds the Docker image, checks six groups of runtime/security tests and opens `http://127.0.0.1:10002/#/playground`. Then visit `http://127.0.0.1:10002/#/monitor`. The live Render deployment remains unchanged until the PR is reviewed and merged.
+
+For CI on Linux, `bash scripts/ci_product_check.sh` compiles Java 17 and exercises both the stateless API and read-only security boundary.
+
+### Explicit boundaries
+
+| Capability | Status |
+| --- | --- |
+| Java-backed content preflight and deterministic recommendations | Implemented, anonymous and stateless |
+| Financial marketing rule checks | Implemented heuristics, not regulatory sign-off |
+| User-specific content fingerprint | Implemented SHA-256 snapshot, not a signed release |
+| Sample publishing-event playback | Implemented simulation, clearly labeled as synthetic |
+| Zernio connected-account health + recent posts | Implemented read-only API calls; live valid-key verification pending |
+| Real Zernio engagement/analytics | Not implemented, may require an Analytics add-on |
+| Real publishing, scheduled delivery and retry orchestration | Not implemented |
+| Real authenticated reviewer approvals and tenant isolation | Not implemented |
+| Signed webhook ingestion and production persistence | Not implemented |
+
+
 **A light-theme content-release assurance workspace.** Create campaigns and drafts, validate social copy, review policy violations, add custom rules, upload media, record decisions, issue locally verifiable release certificates, and explore twelve application sections.
 
 **Status:** functional **local-development build** (v0.1). **Not an enterprise production deployment.** This archive intentionally does **not** implement user authentication, tenant isolation, actual social publishing, cloud storage, external messaging, complete media/transcoding validation, or enterprise-grade retention/WORM evidence. Do not put it on a public-facing network.
@@ -125,3 +161,15 @@ Free Render hosting uses ephemeral storage and can sleep
 after inactivity. Changes to local container files are not durable.
 
 Run locally using run.bat or run.sh for the editable developer mode.
+
+
+## Zernio visitor sandbox (read-only)
+
+The **Integrations** page offers two independent tests:
+
+1. **Public profile URL preview:** Checks the format of a submitted HTTPS LinkedIn, Instagram, X, Facebook, YouTube, TikTok, Threads or Pinterest profile URL. It does not retrieve private data, verify ownership, call Zernio, or save the URL.
+2. **Real Zernio account inspection:** Visitors can supply their **own restricted, read-only, profile-scoped Zernio API key**. The browser sends it once in an Authorization header over HTTPS to `GET /api/zernio/accounts`. Java forwards it to the fixed, upstream **GET** at `https://zernio.com/api/v1/accounts`. The app limits the returned data to display-only account metadata. It does not save the key or results, and does not implement publishing, scheduling, social OAuth, or account changes. A global 20/minute request budget helps protect the free demonstration.
+
+**Privacy and security:** PostFlight does not persist submitted keys, profile URLs or results in files, its application database, browser local storage or cookies. The key is nonetheless transmitted transiently to the PostFlight server, its hosting/network provider and Zernio. This is **not zero-disclosure**. Use a short-lived key with `permission=read` and `scope=profiles` and revoke it after testing. Never enter social-media passwords, an unrestricted API key or another person's key. Zernio manages OAuth tokens for accounts connected separately through its dashboard.
+
+A public profile URL alone never grants control of an account. **Do not connect personal LinkedIn publishing permissions to an unauthenticated public application.** Real multi-user publishing requires authenticated PostFlight users, tenant-to-profile authorization, secure credentials and storage, audit logging, approval controls, and safe retries. The public demo intentionally has none of those write operations.
