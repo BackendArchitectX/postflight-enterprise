@@ -194,7 +194,7 @@ async function startBrowser() {
   throw new Error('No Chromium-based browser available. Install Chrome, Edge or Playwright Chromium. '+failures.join(' | '));
 }
 async function deepProductChecks(p){
-  await check('Security: protected workspace buttons require Cognito setup',async()=>{
+  await check('Security: protected workspace buttons require Clerk setup',async()=>{
     for(const action of ['newWorkspace','invite','secureWorkspaces','joinWorkspace']){
       await go(p,'workspaces');
       await p.locator('[data-action="'+action+'"]').first().click();
@@ -209,7 +209,7 @@ async function deepProductChecks(p){
     await p.locator('[data-action="invite"]').first().click();
     await p.locator('.ops-dialog').getByText(/CONFIGURATION REQUIRED/).waitFor();
   });
-  await check('Security: isolated Cognito API denies anonymous and public writes',async()=>{
+  await check('Security: isolated Clerk API denies anonymous and public writes',async()=>{
     const config=await context.request.get(base+'/api/secure/config');
     must(config.status()===200,'Public workspace config missing');
     const c=await config.json();
