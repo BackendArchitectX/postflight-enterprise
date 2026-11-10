@@ -46,6 +46,13 @@ $docker = $null
 $containerStarted = $false
 $failed = $false
 $summary = @()
+# QA must run in anonymous disposable mode, even if a developer configured Clerk.
+$oldClerkKey=$env:POSTFLIGHT_CLERK_PUBLISHABLE_KEY
+$oldPrivateProxy=$env:POSTFLIGHT_PRIVATE_PROXY
+$oldAppOrigin=$env:POSTFLIGHT_APP_ORIGIN
+$env:POSTFLIGHT_CLERK_PUBLISHABLE_KEY=""
+$env:POSTFLIGHT_PRIVATE_PROXY=""
+$env:POSTFLIGHT_APP_ORIGIN=""
 New-Item -ItemType Directory -Force -Path $out,$work | Out-Null
 Write-Host "PostFlight COMPLETE QA - $stamp"
 Write-Host "Reports: $out"
@@ -191,6 +198,9 @@ try {
         & $docker.Source rm -f $containerName | Out-Null
     }
     if(Test-Path $work){Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue}
+    $env:POSTFLIGHT_CLERK_PUBLISHABLE_KEY=$oldClerkKey
+    $env:POSTFLIGHT_PRIVATE_PROXY=$oldPrivateProxy
+    $env:POSTFLIGHT_APP_ORIGIN=$oldAppOrigin
     Write-Host "The original application data and public Render deployment were not modified."
 }
 if($failed){exit 1}else{exit 0}
